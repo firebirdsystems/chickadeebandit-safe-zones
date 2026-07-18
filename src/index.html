@@ -100,7 +100,7 @@
 import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate } from "/hub-sdk.js";
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
-  clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale,
+  clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -215,7 +215,8 @@ function trackerBannersHtml() {
   return trackers.map((t) => {
     const line = trackerStatusLine(t, memberName(t.memberId), now);
     const cls = trackerIsStale(t, now) ? (t.permissionState !== "granted_always" ? "bad" : "warn") : "ok";
-    return `<div class="banner ${cls}">${esc(line)}</div>`;
+    const battery = trackerBatteryLabel(t);
+    return `<div class="banner ${cls}">${esc(line)}${battery ? ` <span class="tiny">${esc(battery)}</span>` : ""}</div>`;
   }).join("");
 }
 
@@ -292,6 +293,14 @@ function editorHtml() {
         </div>
       </div>
       <div class="field">
+        <label>Home</label>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="zhome" ${z.is_home ? "checked" : ""}> This zone is home</label>
+        </div>
+        <p class="tiny muted">Marking a zone as home lets the location screens show
+        "Home in ~15 min" when someone is on their way. Only one zone can be home.</p>
+      </div>
+      <div class="field">
         <label>Who gets the alert</label>
         <div class="checks">
           <label class="check"><input type="radio" name="aud" id="aud-adults" ${z.alert_audience === "adults" ? "checked" : ""}> All adults</label>
@@ -355,7 +364,7 @@ function blankZone() {
   return {
     id: "", name: "", lat: "", lng: "", radius_m: "300",
     tracked_member_ids: [], alert_audience: "adults",
-    alert_on_enter: true, alert_on_exit: true, active: true,
+    alert_on_enter: true, alert_on_exit: true, active: true, is_home: false,
   };
 }
 
@@ -366,6 +375,7 @@ function readEditorInputs(root) {
   z.alert_on_enter = !!root.querySelector("#zenter")?.checked;
   z.alert_on_exit = !!root.querySelector("#zexit")?.checked;
   z.active = !!root.querySelector("#zactive")?.checked;
+  z.is_home = !!root.querySelector("#zhome")?.checked;
   z.tracked_member_ids = [...root.querySelectorAll("[data-track]:checked")].map((el) => el.dataset.track);
   if (root.querySelector("#aud-adults")?.checked) z.alert_audience = "adults";
   else z.alert_audience = [...root.querySelectorAll("[data-aud]:checked")].map((el) => el.dataset.aud);
@@ -392,6 +402,7 @@ async function saveZone(root) {
       alertOnEnter: z.alert_on_enter,
       alertOnExit: z.alert_on_exit,
       active: z.active,
+      isHome: z.is_home,
     });
     editing = null; map = null; mapCircle = null; error = "";
     await loadZones();
@@ -438,6 +449,7 @@ function wireEvents(root) {
         id: z.id, name: z.name, lat: String(z.lat), lng: String(z.lng), radius_m: String(z.radiusM),
         tracked_member_ids: [...z.trackedMemberIds], alert_audience: z.alertAudience,
         alert_on_enter: z.alertOnEnter, alert_on_exit: z.alertOnExit, active: z.active,
+        is_home: z.isHome,
       };
       render();
     }

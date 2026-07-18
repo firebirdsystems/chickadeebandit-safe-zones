@@ -1,0 +1,13 @@
+-- Marks one zone as the household's home, anchoring the hub's ETA-to-home
+-- estimate ("Emma: home in ~15 min") on the location surfaces.
+--
+-- A dedicated flag rather than matching on the zone named "Home": names are
+-- encrypted and free-text, so a name match would be both unreliable and
+-- locale-bound. Exactly one row may carry the flag — saveSafeZone clears it
+-- from every other zone after a successful write.
+--
+-- INTEGER, so it stays plaintext through the app-DB encryption codec the same
+-- way alert_on_enter/alert_on_exit/active already do. Defaults to 0: existing
+-- households have no home zone and therefore no ETA until an adult picks one,
+-- which is the intended behavior — a guessed anchor is worse than none.
+ALTER TABLE app_safe_zones__zones ADD COLUMN is_home INTEGER NOT NULL DEFAULT 0;

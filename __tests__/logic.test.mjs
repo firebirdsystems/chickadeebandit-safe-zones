@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
-  clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale,
+  clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -90,5 +90,32 @@ describe("tracker status", () => {
   it("goes stale after six hours of silence", () => {
     const silent = { ...fresh, lastReportAt: "2026-07-18T05:00:00Z" };
     expect(trackerIsStale(silent, now)).toBe(true);
+  });
+});
+
+describe("trackerBatteryLabel", () => {
+  it("shows a battery icon and rounded percentage", () => {
+    expect(trackerBatteryLabel({ batteryLevel: 42.4 })).toBe("🔋 42%");
+  });
+  it("shows a plug icon while charging", () => {
+    expect(trackerBatteryLabel({ batteryLevel: 80, batteryCharging: true })).toBe("🔌 80%");
+  });
+  it("renders nothing when the device has never reported battery", () => {
+    // Must not read as 0% — an older client build, not a dead phone.
+    expect(trackerBatteryLabel({})).toBe("");
+    expect(trackerBatteryLabel({ batteryLevel: null })).toBe("");
+  });
+});
+
+describe("parseZoneRow home flag", () => {
+  const base = {
+    id: "z1", name: "Home", lat: "40", lng: "-74", radius_m: "300",
+    tracked_member_ids: "[]", alert_audience: "adults",
+  };
+  it("defaults isHome to false so no ETA is shown until an adult picks one", () => {
+    expect(parseZoneRow(base).isHome).toBe(false);
+  });
+  it("reads the is_home flag", () => {
+    expect(parseZoneRow({ ...base, is_home: 1 }).isHome).toBe(true);
   });
 });

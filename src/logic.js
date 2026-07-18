@@ -70,6 +70,9 @@ export function parseZoneRow(row) {
     alertOnEnter: Number(row.alert_on_enter ?? 1) !== 0,
     alertOnExit: Number(row.alert_on_exit ?? 1) !== 0,
     active: Number(row.active ?? 1) !== 0,
+    // Defaults false: a household with no home zone gets no ETA, which is the
+    // intended state until an adult picks one.
+    isHome: Number(row.is_home ?? 0) !== 0,
   };
 }
 
@@ -87,6 +90,14 @@ export function trackerStatusLine(tracker, memberName, nowMs) {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${name}'s phone last reported ${hours} h ago.`;
   return `${name}'s phone last reported ${Math.floor(hours / 24)} d ago.`;
+}
+
+/** "🔋 12%" / "🔌 45%" for the banner, or "" when the device has never reported
+ *  battery (older client build). Never renders 0% from a missing reading. */
+export function trackerBatteryLabel(tracker) {
+  const level = tracker.batteryLevel;
+  if (typeof level !== "number" || !Number.isFinite(level)) return "";
+  return `${tracker.batteryCharging ? "🔌" : "🔋"} ${Math.round(level)}%`;
 }
 
 export function trackerIsStale(tracker, nowMs, thresholdMs = 6 * 60 * 60 * 1000) {
