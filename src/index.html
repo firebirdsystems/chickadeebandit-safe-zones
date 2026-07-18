@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Safe Zones</title>
+  <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
+  <script src="./vendor/leaflet/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: var(--hub-bg, #f9fafb);
+      --surface: var(--hub-surface, #ffffff);
+      --border: var(--hub-border, #e5e7eb);
+      --border-mid: var(--hub-border, #d1d5db);
+      --text: var(--hub-text, #111827);
+      --muted: var(--hub-text-muted, #6b7280);
+      --accent: var(--hub-primary, #111827);
+      --accent-hover: var(--hub-primary-hover, #374151);
+      --accent-fg: var(--hub-primary-fg, #ffffff);
+      --radius: var(--hub-radius, 8px);
+      --red: #b91c1c; --red-soft: #fee2e2;
+      --amber: #b45309; --amber-soft: #fef3c7;
+      --green: #16a34a; --green-soft: #dcfce7;
+      --shadow: 0 1px 3px rgba(15, 23, 42, .07);
+    }
+    body {
+      min-height: 100vh; background: var(--bg); color: var(--text);
+      font-family: var(--hub-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+      font-size: var(--hub-font-size, 15px); line-height: 1.5;
+    }
+    .app { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    h1 { font-size: 1.35rem; line-height: 1.2; }
+    .muted { color: var(--muted); }
+    .tiny { font-size: .78rem; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .tab {
+      border: 1.5px solid var(--border-mid); background: var(--surface); color: var(--text);
+      border-radius: 999px; padding: 6px 14px; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+    }
+    .tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+    .banner { padding: 9px 12px; border-radius: 8px; margin-bottom: 10px; font-size: .84rem; }
+    .banner.warn { background: var(--amber-soft); color: var(--amber); }
+    .banner.bad { background: var(--red-soft); color: var(--red); }
+    .banner.ok { background: var(--green-soft); color: var(--green); }
+    #map { height: 300px; border-radius: 8px; margin-bottom: 10px; }
+    .field { display: grid; gap: 4px; margin-bottom: 10px; }
+    label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 800; }
+    input[type="text"] {
+      width: 100%; border: 1.5px solid var(--border-mid); border-radius: 8px;
+      padding: 9px 11px; font: inherit; background: var(--surface); color: var(--text);
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    input[type="range"] { width: 100%; }
+    .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+    .check {
+      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+      border: 1.5px solid var(--border-mid); border-radius: 999px; padding: 5px 11px;
+      font-size: .83rem; font-weight: 700; background: var(--surface); user-select: none;
+    }
+    .check input { accent-color: var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border: 1px solid transparent; border-radius: 8px; padding: 9px 14px;
+      font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer;
+      min-height: 40px; background: var(--accent); color: var(--accent-fg);
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { opacity: .48; cursor: default; }
+    .btn.ghost { background: transparent; border-color: var(--border-mid); color: var(--text); }
+    .btn.danger { background: var(--red); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .zone-list { display: grid; gap: 10px; }
+    .zone-tile { display: flex; align-items: center; gap: 12px; }
+    .zone-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green); flex: 0 0 auto; }
+    .zone-dot.off { background: var(--border-mid); }
+    .zone-main { flex: 1 1 auto; min-width: 0; }
+    .zone-name { font-weight: 700; }
+    .zone-sub { color: var(--muted); font-size: .8rem; }
+    .hist { display: grid; gap: 8px; }
+    .hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; }
+    .hist-when { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+    .empty, .loading { color: var(--muted); text-align: center; padding: 28px 16px; }
+    .empty h2 { color: var(--text); font-size: 1.05rem; margin-bottom: 6px; }
+    .error { background: var(--red-soft); color: var(--red); padding: 9px 12px; border-radius: 8px; margin-bottom: 10px; font-size: .86rem; }
+  </style>
+  <base href="/run/safe-zones/">
+</head>
+<body>
+<div class="app">
+  <div id="root" class="loading">Loading…</div>
+</div>
+
+<script type="module">
+import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate } from "/hub-sdk.js";
+import {
+  MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
+  clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale,
+} from "./logic.js";
+
+const CONTEXT = window.__CONTEXT_URL ?? "";
+const DB = window.__DB_URL ?? "";
+const ZONE_MANAGE = "/api/geofence/zones/manage";
+const ME = window.__CURRENT_MEMBER ?? null;
+
+let members = [];
+let trackers = [];
+let zones = [];
+let events = [];
+let tab = "zones";
+let editing = null;      // zone draft being edited (null = list view)
+let error = "";
+let capabilityBlocked = false;
+let zonesDenied = false; // non-adult viewer: zones read is adult-only → history-only mode
+let map = null;
+let mapCircle = null;
+
+async function db(sql, params = []) {
+  if (!DB) return { rows: [], status: 0 };
+  const res = await fetch(DB, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  if (res.status === 402) { capabilityBlocked = true; return { rows: [], status: 402 }; }
+  if (res.status === 403) return { rows: [], status: 403 };
+  if (!res.ok) throw new Error(`db ${res.status}`);
+  const payload = await res.json();
+  return { rows: payload.rows ?? [], status: res.status };
+}
+
+async function mutateZone(method, body) {
+  const res = await fetch(ZONE_MANAGE, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 402) { capabilityBlocked = true; throw new Error("capability_required"); }
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    throw new Error(payload.error || `zone ${res.status}`);
+  }
+  return res.json();
+}
+
+async function loadContext() {
+  if (!CONTEXT) { members = []; trackers = []; return; }
+  try {
+    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers`);
+    const ctx = await res.json();
+    members = ctx["family.members"] ?? [];
+    trackers = ctx["family.geofence_trackers"] ?? [];
+  } catch { members = []; trackers = []; }
+}
+
+async function loadZones() {
+  const { rows, status } = await db("SELECT * FROM app_safe_zones__zones ORDER BY created_at");
+  zonesDenied = status === 403;
+  if (zonesDenied && tab === "zones") tab = "history";
+  zones = (rows ?? []).map(parseZoneRow).filter(Boolean);
+}
+
+async function loadEvents() {
+  const { rows } = await db("SELECT label, member_name, zone_name, type, occurred_at FROM app_safe_zones__zone_events WHERE classification <> 'duplicate' ORDER BY received_at DESC LIMIT 50");
+  events = rows ?? [];
+}
+
+function memberName(id) { return members.find((m) => m.id === id)?.name ?? "Unknown"; }
+function amAdult() { return !!ME && isAdult(members.find((m) => m.id === ME.id) ?? ME); }
+
+// --- Rendering ---------------------------------------------------------------
+
+function render() {
+  const root = document.getElementById("root");
+  root.className = "";
+
+  if (capabilityBlocked) {
+    root.innerHTML = `
+      <div class="empty card">
+        <h2>🛟 Safe Zones is a Premium feature</h2>
+        <p class="muted">Zone alerts need the hub to watch for arrivals and send pushes.
+        Upgrade to Premium in Settings → Billing to turn it on.</p>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="topbar">
+      <h1>🛟 Safe Zones</h1>
+      ${zonesDenied ? "" : `<span class="tiny muted">${zones.length}/${MAX_ZONES} zones</span>`}
+    </div>
+    ${error ? `<div class="error">${esc(error)}</div>` : ""}
+    ${trackerBannersHtml()}
+    ${zonesDenied ? "" : `<div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="${tab === "zones"}" data-tab="zones">Zones</button>
+      <button class="tab" role="tab" aria-selected="${tab === "history"}" data-tab="history">History</button>
+    </div>`}`;
+
+  html += tab === "zones" && !zonesDenied ? zonesHtml() : historyHtml();
+  root.innerHTML = html;
+  wireEvents(root);
+  if (editing) initMap();
+  const autofocus = root.querySelector("[data-autofocus]");
+  if (autofocus) autofocus.focus();
+}
+
+function trackerBannersHtml() {
+  if (!trackers.length) return "";
+  const now = Date.now();
+  return trackers.map((t) => {
+    const line = trackerStatusLine(t, memberName(t.memberId), now);
+    const cls = trackerIsStale(t, now) ? (t.permissionState !== "granted_always" ? "bad" : "warn") : "ok";
+    return `<div class="banner ${cls}">${esc(line)}</div>`;
+  }).join("");
+}
+
+function zonesHtml() {
+  if (editing) return editorHtml();
+  if (!zones.length) {
+    const install = trackers.length === 0 ? installHtml() : "";
+    return `
+      <div class="empty card">
+        <h2>No safe zones yet</h2>
+        <p class="muted">Draw a circle around school, home, or practice and get a push
+        when a tracked family member arrives or leaves.</p>
+        ${amAdult() ? '<p style="margin-top:12px"><button class="btn" data-action="new">＋ Add a zone</button></p>' : '<p class="tiny muted">An adult can add zones.</p>'}
+      </div>` + install;
+  }
+  const tiles = zones.map((z) => `
+    <div class="zone-tile">
+      <span class="zone-dot ${z.active ? "" : "off"}"></span>
+      <div class="zone-main">
+        <div class="zone-name">${esc(z.name)}</div>
+        <div class="zone-sub">${Math.round(z.radiusM)} m ·
+          ${z.trackedMemberIds.map((id) => esc(memberName(id))).join(", ") || "nobody tracked"}
+          ${z.active ? "" : " · paused"}</div>
+      </div>
+      ${amAdult() ? `<button class="btn ghost" data-action="edit" data-id="${esc(z.id)}">Edit</button>` : ""}
+    </div>`).join("");
+  return `
+    <div class="card"><div class="zone-list">${tiles}</div></div>
+    ${amAdult() ? `<div class="btn-row"><button class="btn" data-action="new" ${zones.length >= MAX_ZONES ? "disabled" : ""}>＋ Add a zone</button></div>` : ""}
+    ${trackers.length === 0 ? installHtml() : ""}`;
+}
+
+function installHtml() {
+  return `
+    <div class="card">
+      <strong>Get Chickadee Locate</strong>
+      <p class="tiny muted" style="margin-top:4px">
+        Safe-zone alerts come from the free <em>Chickadee Locate</em> companion app on the
+        tracked person's phone. Install it from the App Store or Google Play, sign in, and
+        pick who it tracks — alerts for everyone else arrive right here through the hub.
+      </p>
+    </div>`;
+}
+
+function editorHtml() {
+  const z = editing;
+  const memberChecks = members.filter((m) => m.role !== "guest").map((m) => `
+    <label class="check"><input type="checkbox" data-track="${esc(m.id)}"
+      ${z.tracked_member_ids.includes(m.id) ? "checked" : ""}> ${esc(m.name)}</label>`).join("");
+  const audienceMembers = members.filter((m) => m.role !== "guest").map((m) => `
+    <label class="check"><input type="checkbox" data-aud="${esc(m.id)}"
+      ${Array.isArray(z.alert_audience) && z.alert_audience.includes(m.id) ? "checked" : ""}
+      ${z.alert_audience === "adults" ? "disabled" : ""}> ${esc(m.name)}</label>`).join("");
+  return `
+    <div class="card">
+      <div class="field">
+        <label for="zname">Zone name</label>
+        <input type="text" id="zname" maxlength="60" value="${esc(z.name)}" placeholder="School" data-autofocus>
+      </div>
+      <div id="map"></div>
+      <p class="tiny muted" style="margin-bottom:10px">Tap the map to place the zone.
+        ${z.lat !== "" ? `Center: ${Number(z.lat).toFixed(5)}, ${Number(z.lng).toFixed(5)}` : "No spot picked yet."}</p>
+      <div class="field">
+        <label for="zradius">Radius — <span id="radius-label">${clampRadius(z.radius_m)}</span> m</label>
+        <input type="range" id="zradius" min="${MIN_RADIUS_M}" max="${MAX_RADIUS_M}" step="10" value="${clampRadius(z.radius_m)}">
+      </div>
+      <div class="field"><label>Track</label><div class="checks">${memberChecks}</div></div>
+      <div class="field">
+        <label>Alert</label>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="zenter" ${z.alert_on_enter ? "checked" : ""}> On arrive</label>
+          <label class="check"><input type="checkbox" id="zexit" ${z.alert_on_exit ? "checked" : ""}> On leave</label>
+          <label class="check"><input type="checkbox" id="zactive" ${z.active ? "checked" : ""}> Zone active</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Who gets the alert</label>
+        <div class="checks">
+          <label class="check"><input type="radio" name="aud" id="aud-adults" ${z.alert_audience === "adults" ? "checked" : ""}> All adults</label>
+          <label class="check"><input type="radio" name="aud" id="aud-members" ${z.alert_audience !== "adults" ? "checked" : ""}> Specific members</label>
+        </div>
+        <div class="checks" id="aud-list" style="margin-top:6px">${audienceMembers}</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-action="save">${z.id ? "Save zone" : "Create zone"}</button>
+        <button class="btn ghost" data-action="cancel">Cancel</button>
+        ${z.id ? '<button class="btn danger" data-action="delete">Delete</button>' : ""}
+      </div>
+    </div>`;
+}
+
+function historyHtml() {
+  // Non-adults land here directly: zones are adult-managed and the history the
+  // hub returns is already scoped to their own crossings by the row policy.
+  const note = zonesDenied
+    ? '<p class="tiny muted" style="margin-bottom:8px">Zones are managed by adults. This is your own zone activity.</p>'
+    : "";
+  if (!events.length) return note + '<div class="empty card">No zone activity in the last 30 days.</div>';
+  const rows = events.map((e) => `
+    <div class="hist-row">
+      <span>${esc(e.label || `${e.member_name || "Someone"} ${e.type === "enter" ? "arrived at" : "left"} ${e.zone_name || "a zone"}`)}</span>
+      <span class="hist-when">${esc(formatRelativeDate ? formatRelativeDate(e.occurred_at) : e.occurred_at)}</span>
+    </div>`).join("");
+  return `${note}<div class="card"><div class="hist">${rows}</div></div>`;
+}
+
+// --- Map ---------------------------------------------------------------------
+
+function initMap() {
+  const el = document.getElementById("map");
+  if (!el || typeof L === "undefined") return;
+  const z = editing;
+  const hasSpot = z.lat !== "" && z.lng !== "";
+  map = L.map(el, { zoomControl: true, attributionControl: false });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+  if (hasSpot) map.setView([Number(z.lat), Number(z.lng)], 15);
+  else map.setView([39.5, -98.35], 4);
+  if (hasSpot) drawCircle();
+  map.on("click", (ev) => {
+    z.lat = String(ev.latlng.lat);
+    z.lng = String(ev.latlng.lng);
+    drawCircle();
+  });
+}
+
+function drawCircle() {
+  if (!map || editing.lat === "") return;
+  const center = [Number(editing.lat), Number(editing.lng)];
+  const radius = clampRadius(editing.radius_m);
+  if (mapCircle) { mapCircle.setLatLng(center); mapCircle.setRadius(radius); }
+  else mapCircle = L.circle(center, { radius, color: "#2563eb", fillOpacity: 0.15 }).addTo(map);
+}
+
+// --- Actions -----------------------------------------------------------------
+
+function blankZone() {
+  return {
+    id: "", name: "", lat: "", lng: "", radius_m: "300",
+    tracked_member_ids: [], alert_audience: "adults",
+    alert_on_enter: true, alert_on_exit: true, active: true,
+  };
+}
+
+function readEditorInputs(root) {
+  const z = editing;
+  z.name = root.querySelector("#zname")?.value ?? z.name;
+  z.radius_m = root.querySelector("#zradius")?.value ?? z.radius_m;
+  z.alert_on_enter = !!root.querySelector("#zenter")?.checked;
+  z.alert_on_exit = !!root.querySelector("#zexit")?.checked;
+  z.active = !!root.querySelector("#zactive")?.checked;
+  z.tracked_member_ids = [...root.querySelectorAll("[data-track]:checked")].map((el) => el.dataset.track);
+  if (root.querySelector("#aud-adults")?.checked) z.alert_audience = "adults";
+  else z.alert_audience = [...root.querySelectorAll("[data-aud]:checked")].map((el) => el.dataset.aud);
+}
+
+async function saveZone(root) {
+  error = "";
+  readEditorInputs(root);
+  const z = editing;
+  const problems = validateZone(z, zones.length, !!z.id);
+  if (Array.isArray(z.alert_audience) && z.alert_audience.length === 0) {
+    problems.push("Pick at least one person to alert (or choose All adults).");
+  }
+  if (problems.length) { await hubAlert(problems[0]); return; }
+  try {
+    await mutateZone("POST", {
+      ...(z.id ? { id: z.id } : {}),
+      name: z.name.trim(),
+      lat: Number(z.lat),
+      lng: Number(z.lng),
+      radiusM: clampRadius(z.radius_m),
+      trackedMemberIds: z.tracked_member_ids,
+      alertAudience: z.alert_audience,
+      alertOnEnter: z.alert_on_enter,
+      alertOnExit: z.alert_on_exit,
+      active: z.active,
+    });
+    editing = null; map = null; mapCircle = null; error = "";
+    await loadZones();
+    render();
+  } catch {
+    error = "Couldn't save the zone. Try again.";
+    render();
+  }
+}
+
+async function deleteZone() {
+  const ok = await hubConfirm({
+    message: "Delete this zone?",
+    description: "Phones tracking it will stop within a few hours. History rows are kept.",
+    confirmLabel: "Delete",
+    destructive: true,
+  });
+  if (!ok) return;
+  try {
+    await mutateZone("DELETE", { id: editing.id });
+    editing = null; map = null; mapCircle = null;
+    await loadZones();
+    render();
+  } catch {
+    error = "Couldn't delete the zone.";
+    render();
+  }
+}
+
+function wireEvents(root) {
+  root.querySelectorAll("[data-tab]").forEach((btn) => btn.addEventListener("click", async () => {
+    tab = btn.dataset.tab;
+    editing = null; map = null; mapCircle = null;
+    if (tab === "history") await loadEvents();
+    render();
+  }));
+  root.querySelectorAll("[data-action]").forEach((btn) => btn.addEventListener("click", async () => {
+    const action = btn.dataset.action;
+    if (action === "new") { editing = blankZone(); render(); }
+    else if (action === "edit") {
+      const z = zones.find((x) => x.id === btn.dataset.id);
+      if (!z) return;
+      editing = {
+        id: z.id, name: z.name, lat: String(z.lat), lng: String(z.lng), radius_m: String(z.radiusM),
+        tracked_member_ids: [...z.trackedMemberIds], alert_audience: z.alertAudience,
+        alert_on_enter: z.alertOnEnter, alert_on_exit: z.alertOnExit, active: z.active,
+      };
+      render();
+    }
+    else if (action === "cancel") { editing = null; map = null; mapCircle = null; render(); }
+    else if (action === "save") { await saveZone(root); }
+    else if (action === "delete") { await deleteZone(); }
+  }));
+  const radius = root.querySelector("#zradius");
+  if (radius) radius.addEventListener("input", () => {
+    editing.radius_m = radius.value;
+    const label = root.querySelector("#radius-label");
+    if (label) label.textContent = String(clampRadius(radius.value));
+    drawCircle();
+  });
+  root.querySelectorAll('input[name="aud"]').forEach((el) => el.addEventListener("change", () => {
+    readEditorInputs(root);
+    render();
+  }));
+}
+
+// --- Boot --------------------------------------------------------------------
+
+async function boot() {
+  try {
+    await Promise.all([loadContext(), loadZones()]);
+    if (tab === "history") await loadEvents();
+  } catch {
+    error = "Couldn't load Safe Zones data.";
+  }
+  render();
+}
+
+boot();
+</script>
+</body>
+</html>

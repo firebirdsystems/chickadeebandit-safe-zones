@@ -1,0 +1,28 @@
+{
+  "scenarios": [
+    {
+      "name": "Zones are adult-read, hub-endpoint-write: children see nothing, nobody writes directly",
+      "members": { "alex": "adult", "casey": "child" },
+      "steps": [
+        { "action": "seedRaw", "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at) VALUES ('z1', 'School', '40.1', '-75.2', '300', ?, 'adults', 1, 1, 1, ?, '2026-07-17T09:00:00Z', '2026-07-17T09:00:00Z')", "params": ["[\"{{casey}}\"]", "{{alex}}"] },
+        { "action": "db", "as": "alex", "sql": "SELECT id, name FROM app_safe_zones__zones", "expect": { "status": 200, "rowCount": 1 } },
+        { "action": "db", "as": "casey", "sql": "SELECT id, name FROM app_safe_zones__zones", "expect": { "status": 403 } },
+        { "action": "db", "as": "alex", "sql": "UPDATE app_safe_zones__zones SET active = 0 WHERE id = 'z1'", "expect": { "status": 403 } },
+        { "action": "db", "as": "casey", "sql": "UPDATE app_safe_zones__zones SET active = 0 WHERE id = 'z1'", "expect": { "status": 403 } },
+        { "action": "db", "as": "casey", "sql": "DELETE FROM app_safe_zones__zones WHERE id = 'z1'", "expect": { "status": 403 } }
+      ]
+    },
+    {
+      "name": "zone_events: adults read all, a tracked member reads only their own, nobody forges a crossing",
+      "members": { "alex": "adult", "casey": "child", "riley": "child" },
+      "steps": [
+        { "action": "seedRaw", "sql": "INSERT INTO app_safe_zones__zone_events (id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, alerted) VALUES ('e1', 'z1', 'School', ?, 'Casey', 'enter', 'Casey arrived at School', '2026-07-17T08:30:00Z', '2026-07-17T08:30:05Z', 1)", "params": ["{{casey}}"] },
+        { "action": "seedRaw", "sql": "INSERT INTO app_safe_zones__zone_events (id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, alerted) VALUES ('e2', 'z1', 'School', ?, 'Riley', 'enter', 'Riley arrived at School', '2026-07-17T08:40:00Z', '2026-07-17T08:40:05Z', 1)", "params": ["{{riley}}"] },
+        { "action": "db", "as": "alex", "sql": "SELECT label, type FROM app_safe_zones__zone_events", "expect": { "status": 200, "rowCount": 2 } },
+        { "action": "db", "as": "casey", "sql": "SELECT label, type FROM app_safe_zones__zone_events", "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "label": "Casey arrived at School" }] } },
+        { "action": "db", "as": "alex", "sql": "INSERT INTO app_safe_zones__zone_events (id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, alerted) VALUES ('e3', 'z1', 'School', ?, 'Casey', 'exit', 'forged', '2026-07-17T09:00:00Z', 0)", "params": ["{{casey}}"], "expect": { "status": 403 } },
+        { "action": "db", "as": "casey", "sql": "UPDATE app_safe_zones__zone_events SET label = 'edited' WHERE id = 'e1'", "expect": { "status": 403 } }
+      ]
+    }
+  ]
+}

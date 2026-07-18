@@ -1,0 +1,50 @@
+{
+  "id": "safe-zones",
+  "name": "Safe Zones",
+  "version": "1.0.0",
+  "description": "Geofenced safe-zone alerts — get a push when a family member arrives at school, home, or practice. Adults draw zones on a map; the tracked person's phone runs the Chickadee Locate companion app, which reports zone crossings to the hub. Premium.",
+  "entrypoint": "index.html",
+  "runtime": "static",
+  "category": "family",
+  "tags": ["family", "location", "geofence", "safety", "alerts", "premium"],
+  "icon": "🛟",
+  "storage": "db",
+  "required_capabilities": ["geofence"],
+  "data_access": {
+    "reads": ["family.members", "family.geofence_trackers"],
+    "writes": []
+  },
+  "permissions": {
+    "default_audience": "everyone",
+    "requires_approval": false
+  },
+  "row_policies": {
+    "zones": {
+      "kind": "endpoint_only",
+      "read": "adult",
+      "max_rows": 15
+    },
+    "zone_events": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": true,
+      "endpoint_writes_only": true,
+      "retain_days": { "default": 30, "timestamp_column": "received_at", "override_key": "zone_history" }
+    }
+  },
+  "db_plaintext_columns": ["classification", "delivery_status"],
+  "nav": { "label": "Safe Zones" },
+  "glance": {
+    "source": {
+      "kind": "sql",
+      "query": "SELECT label AS title, occurred_at AS at FROM app_safe_zones__zone_events WHERE classification <> 'duplicate' ORDER BY received_at DESC LIMIT 5"
+    },
+    "display": { "template": "list", "title": "title", "when": "at" }
+  },
+  "cdn_whitelist": [
+    "https://*.tile.openstreetmap.org"
+  ],
+  "resource_limits": {
+    "max_db_bytes": 52428800
+  }
+}
