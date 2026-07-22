@@ -1,5 +1,6 @@
 {
   "id": "safe-zones",
+  "contexts": ["household", "shared_space"],
   "name": "Safe Zones",
   "version": "1.1.0",
   "description": "Geofenced safe-zone alerts — get a push when a family member arrives at school, home, or practice. Adults draw zones on a map; the tracked person's phone runs the Chickadee Locate companion app, which reports zone crossings to the hub. Premium.",
