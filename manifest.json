@@ -2,7 +2,7 @@
   "id": "safe-zones",
   "contexts": ["household", "shared_space"],
   "name": "Safe Zones",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "Geofenced safe-zone alerts — get a push when a family member arrives at school, home, or practice. Adults draw zones on a map; the tracked person's phone runs the Chickadee Locate companion app, which reports zone crossings to the hub. Premium.",
   "entrypoint": "index.html",
   "runtime": "static",
@@ -43,7 +43,8 @@
     "display": { "template": "list", "title": "title", "when": "at" }
   },
   "cdn_whitelist": [
-    "https://*.tile.openstreetmap.org"
+    "https://*.tile.openstreetmap.org",
+    "https://nominatim.openstreetmap.org"
   ],
   "resource_limits": {
     "max_db_bytes": 52428800

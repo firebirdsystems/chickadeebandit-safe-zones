@@ -76,6 +76,48 @@ export function parseZoneRow(row) {
   };
 }
 
+// --- Address search (geocoding) ----------------------------------------------
+
+export const GEOCODE_ENDPOINT = "https://nominatim.openstreetmap.org/search";
+export const MAX_GEOCODE_RESULTS = 5;
+
+/** Builds the Nominatim search URL, or "" when the query is too short to be
+ *  worth a request. Nominatim asks callers not to fire per-keystroke lookups,
+ *  so callers must only hit this on an explicit search (Enter / button). */
+export function buildGeocodeUrl(query) {
+  const q = String(query ?? "").trim();
+  if (q.length < 3) return "";
+  const params = new URLSearchParams({
+    q, format: "jsonv2", limit: String(MAX_GEOCODE_RESULTS), addressdetails: "0",
+  });
+  return `${GEOCODE_ENDPOINT}?${params}`;
+}
+
+/** Normalizes a Nominatim response into [{ label, lat, lng }], dropping any
+ *  entry with coordinates we would refuse to store anyway. */
+export function parseGeocodeResults(payload) {
+  if (!Array.isArray(payload)) return [];
+  const out = [];
+  for (const item of payload) {
+    const lat = strictNumber(item?.lat);
+    const lng = strictNumber(item?.lon);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) continue;
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) continue;
+    const label = String(item?.display_name ?? "").trim();
+    if (!label) continue;
+    out.push({ label, lat, lng });
+    if (out.length >= MAX_GEOCODE_RESULTS) break;
+  }
+  return out;
+}
+
+/** Suggests a zone name from a geocode result — the first, most specific part
+ *  of the address ("Lincoln Elementary School"), so an adult rarely retypes it. */
+export function zoneNameFromResult(result) {
+  const first = String(result?.label ?? "").split(",")[0]?.trim() ?? "";
+  return first.slice(0, 60);
+}
+
 /** "Dana's phone last reported 12 min ago" / "permission revoked" banner rows. */
 export function trackerStatusLine(tracker, memberName, nowMs) {
   const name = memberName || "A member";

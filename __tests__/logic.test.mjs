@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
+  buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult, MAX_GEOCODE_RESULTS,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -104,6 +105,52 @@ describe("trackerBatteryLabel", () => {
     // Must not read as 0% — an older client build, not a dead phone.
     expect(trackerBatteryLabel({})).toBe("");
     expect(trackerBatteryLabel({ batteryLevel: null })).toBe("");
+  });
+});
+
+describe("buildGeocodeUrl", () => {
+  it("builds an escaped Nominatim search URL", () => {
+    const url = new URL(buildGeocodeUrl(" 123 Main St, Springfield "));
+    expect(url.origin + url.pathname).toBe("https://nominatim.openstreetmap.org/search");
+    expect(url.searchParams.get("q")).toBe("123 Main St, Springfield");
+    expect(url.searchParams.get("limit")).toBe(String(MAX_GEOCODE_RESULTS));
+  });
+  it("refuses queries too short to be worth a lookup", () => {
+    expect(buildGeocodeUrl("")).toBe("");
+    expect(buildGeocodeUrl("  a ")).toBe("");
+    expect(buildGeocodeUrl(null)).toBe("");
+  });
+});
+
+describe("parseGeocodeResults", () => {
+  const hit = { lat: "40.7128", lon: "-74.0060", display_name: "New York, NY, USA" };
+
+  it("normalizes results to label/lat/lng", () => {
+    expect(parseGeocodeResults([hit])).toEqual([{ label: "New York, NY, USA", lat: 40.7128, lng: -74.006 }]);
+  });
+  it("drops entries the zone editor could never store", () => {
+    expect(parseGeocodeResults([
+      { ...hit, lat: "91" },
+      { ...hit, lon: "abc" },
+      { ...hit, display_name: "  " },
+    ])).toEqual([]);
+  });
+  it("caps the list and tolerates junk payloads", () => {
+    const many = Array.from({ length: 20 }, () => hit);
+    expect(parseGeocodeResults(many)).toHaveLength(MAX_GEOCODE_RESULTS);
+    expect(parseGeocodeResults(null)).toEqual([]);
+    expect(parseGeocodeResults({ error: "rate limited" })).toEqual([]);
+  });
+});
+
+describe("zoneNameFromResult", () => {
+  it("suggests the most specific part of the address", () => {
+    expect(zoneNameFromResult({ label: "Lincoln Elementary School, 5th Ave, Springfield" }))
+      .toBe("Lincoln Elementary School");
+  });
+  it("stays inside the name column's 60-character limit", () => {
+    expect(zoneNameFromResult({ label: "x".repeat(200) })).toHaveLength(60);
+    expect(zoneNameFromResult({})).toBe("");
   });
 });
 

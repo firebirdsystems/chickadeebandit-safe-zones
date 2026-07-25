@@ -88,6 +88,17 @@
     .empty, .loading { color: var(--muted); text-align: center; padding: 28px 16px; }
     .empty h2 { color: var(--text); font-size: 1.05rem; margin-bottom: 6px; }
     .error { background: var(--red-soft); color: var(--red); padding: 9px 12px; border-radius: 8px; margin-bottom: 10px; font-size: .86rem; }
+    .search-row { display: flex; gap: 8px; }
+    .search-row input[type="text"] { flex: 1 1 auto; min-width: 0; }
+    .search-row .btn { flex: 0 0 auto; }
+    .results { display: grid; gap: 4px; margin: 8px 0 0; }
+    .result {
+      text-align: left; border: 1.5px solid var(--border-mid); background: var(--surface);
+      color: var(--text); border-radius: 8px; padding: 8px 10px; font: inherit;
+      font-size: .84rem; cursor: pointer;
+    }
+    .result:hover { border-color: var(--accent); }
+    .search-note { margin-top: 6px; }
   </style>
   <base href="/run/safe-zones/">
 </head>
@@ -101,6 +112,7 @@ import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate } from "/hub-sdk
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
+  buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -119,6 +131,10 @@ let capabilityBlocked = false;
 let zonesDenied = false; // non-adult viewer: zones read is adult-only → history-only mode
 let map = null;
 let mapCircle = null;
+let searchQuery = "";     // address-search box contents, kept across re-renders
+let searchResults = [];   // [{ label, lat, lng }] from the last search
+let searchBusy = false;
+let searchMessage = "";
 
 async function db(sql, params = []) {
   if (!DB) return { rows: [], status: 0 };
@@ -274,10 +290,20 @@ function editorHtml() {
     <div class="card">
       <div class="field">
         <label for="zname">Zone name</label>
-        <input type="text" id="zname" maxlength="60" value="${esc(z.name)}" placeholder="School" data-autofocus>
+        <input type="text" id="zname" maxlength="60" value="${esc(z.name)}" placeholder="School" ${searchQuery ? "" : "data-autofocus"}>
+      </div>
+      <div class="field">
+        <label for="zsearch">Find an address</label>
+        <div class="search-row">
+          <input type="text" id="zsearch" maxlength="200" value="${esc(searchQuery)}"
+            placeholder="123 Main St, Springfield" autocomplete="off" enterkeyhint="search"
+            ${searchQuery ? "data-autofocus" : ""}>
+          <button class="btn ghost" data-action="search" ${searchBusy ? "disabled" : ""}>${searchBusy ? "Searching…" : "Search"}</button>
+        </div>
+        <div id="search-results">${searchResultsHtml()}</div>
       </div>
       <div id="map"></div>
-      <p class="tiny muted" style="margin-bottom:10px">Tap the map to place the zone.
+      <p class="tiny muted" style="margin-bottom:10px">Search for an address or tap the map to place the zone.
         ${z.lat !== "" ? `Center: ${Number(z.lat).toFixed(5)}, ${Number(z.lng).toFixed(5)}` : "No spot picked yet."}</p>
       <div class="field">
         <label for="zradius">Radius — <span id="radius-label">${clampRadius(z.radius_m)}</span> m</label>
@@ -316,6 +342,15 @@ function editorHtml() {
     </div>`;
 }
 
+function searchResultsHtml() {
+  if (searchMessage) return `<p class="tiny muted search-note">${esc(searchMessage)}</p>`;
+  if (!searchResults.length) return "";
+  const rows = searchResults.map((r, i) => `
+    <button type="button" class="result" data-result="${i}">${esc(r.label)}</button>`).join("");
+  return `<div class="results">${rows}</div>
+    <p class="tiny muted search-note">Addresses from OpenStreetMap.</p>`;
+}
+
 function historyHtml() {
   // Non-adults land here directly: zones are adult-managed and the history the
   // hub returns is already scoped to their own crossings by the row policy.
@@ -338,6 +373,10 @@ function initMap() {
   if (!el || typeof L === "undefined") return;
   const z = editing;
   const hasSpot = z.lat !== "" && z.lng !== "";
+  // render() replaces the container on every state change, so drop the previous
+  // instance's listeners before building a new one.
+  if (map) { try { map.remove(); } catch { /* container already gone */ } }
+  mapCircle = null;
   map = L.map(el, { zoomControl: true, attributionControl: false });
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
   if (hasSpot) map.setView([Number(z.lat), Number(z.lng)], 15);
@@ -381,6 +420,51 @@ function readEditorInputs(root) {
   else z.alert_audience = [...root.querySelectorAll("[data-aud]:checked")].map((el) => el.dataset.aud);
 }
 
+function resetSearch() {
+  searchQuery = ""; searchResults = []; searchBusy = false; searchMessage = "";
+}
+
+/** Looks the typed address up on demand — never per keystroke, which the
+ *  OpenStreetMap geocoder's usage policy forbids. */
+async function runAddressSearch(root) {
+  if (searchBusy) return;
+  readEditorInputs(root);
+  searchQuery = root.querySelector("#zsearch")?.value ?? "";
+  const url = buildGeocodeUrl(searchQuery);
+  if (!url) {
+    searchResults = [];
+    searchMessage = "Type at least three characters of an address.";
+    render();
+    return;
+  }
+  searchBusy = true; searchMessage = ""; searchResults = [];
+  render();
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`geocode ${res.status}`);
+    searchResults = parseGeocodeResults(await res.json());
+    searchMessage = searchResults.length ? "" : "No places matched that address.";
+  } catch {
+    searchResults = [];
+    searchMessage = "Couldn't look that address up. Try again, or tap the map.";
+  }
+  searchBusy = false;
+  render();
+}
+
+function pickSearchResult(root, index) {
+  const hit = searchResults[index];
+  if (!hit || !editing) return;
+  readEditorInputs(root);
+  editing.lat = String(hit.lat);
+  editing.lng = String(hit.lng);
+  if (!String(editing.name).trim()) editing.name = zoneNameFromResult(hit);
+  searchResults = [];
+  searchMessage = "";
+  map = null; mapCircle = null;   // re-created centered on the picked address
+  render();
+}
+
 async function saveZone(root) {
   error = "";
   readEditorInputs(root);
@@ -404,7 +488,7 @@ async function saveZone(root) {
       active: z.active,
       isHome: z.is_home,
     });
-    editing = null; map = null; mapCircle = null; error = "";
+    editing = null; map = null; mapCircle = null; error = ""; resetSearch();
     await loadZones();
     render();
   } catch {
@@ -423,7 +507,7 @@ async function deleteZone() {
   if (!ok) return;
   try {
     await mutateZone("DELETE", { id: editing.id });
-    editing = null; map = null; mapCircle = null;
+    editing = null; map = null; mapCircle = null; resetSearch();
     await loadZones();
     render();
   } catch {
@@ -435,14 +519,16 @@ async function deleteZone() {
 function wireEvents(root) {
   root.querySelectorAll("[data-tab]").forEach((btn) => btn.addEventListener("click", async () => {
     tab = btn.dataset.tab;
-    editing = null; map = null; mapCircle = null;
+    editing = null; map = null; mapCircle = null; resetSearch();
     if (tab === "history") await loadEvents();
     render();
   }));
   root.querySelectorAll("[data-action]").forEach((btn) => btn.addEventListener("click", async () => {
     const action = btn.dataset.action;
-    if (action === "new") { editing = blankZone(); render(); }
+    if (action === "new") { editing = blankZone(); resetSearch(); render(); }
+    else if (action === "search") { await runAddressSearch(root); }
     else if (action === "edit") {
+      resetSearch();
       const z = zones.find((x) => x.id === btn.dataset.id);
       if (!z) return;
       editing = {
@@ -453,10 +539,22 @@ function wireEvents(root) {
       };
       render();
     }
-    else if (action === "cancel") { editing = null; map = null; mapCircle = null; render(); }
+    else if (action === "cancel") { editing = null; map = null; mapCircle = null; resetSearch(); render(); }
     else if (action === "save") { await saveZone(root); }
     else if (action === "delete") { await deleteZone(); }
   }));
+  root.querySelectorAll("[data-result]").forEach((btn) => btn.addEventListener("click", () => {
+    pickSearchResult(root, Number(btn.dataset.result));
+  }));
+  const search = root.querySelector("#zsearch");
+  if (search) {
+    search.addEventListener("input", () => { searchQuery = search.value; });
+    search.addEventListener("keydown", async (ev) => {
+      if (ev.key !== "Enter") return;
+      ev.preventDefault();   // Enter in the editor must search, not submit
+      await runAddressSearch(root);
+    });
+  }
   const radius = root.querySelector("#zradius");
   if (radius) radius.addEventListener("input", () => {
     editing.radius_m = radius.value;
