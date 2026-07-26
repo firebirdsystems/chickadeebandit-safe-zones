@@ -117,7 +117,10 @@ import {
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB = window.__DB_URL ?? "";
-const ZONE_MANAGE = "/api/geofence/zones/manage";
+const APP_ID = window.__APP_ID ?? "safe-zones";
+// App-origin runtime path. The hub-origin /api/geofence/zones/manage twin is
+// for the hub's own screens — only /run/{appId}/... exists on this origin.
+const ZONE_MANAGE = `/run/${APP_ID}/api/geofence/zones/manage`;
 const ME = window.__CURRENT_MEMBER ?? null;
 
 let members = [];

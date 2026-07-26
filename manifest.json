@@ -11,6 +11,10 @@
   "icon": "🛟",
   "storage": "db",
   "required_capabilities": ["geofence"],
+  "geofence_zones": {
+    "zones_table": "zones",
+    "events_table": "zone_events"
+  },
   "data_access": {
     "reads": ["family.members", "family.geofence_trackers"],
     "writes": []
