@@ -82,6 +82,9 @@
     .zone-main { flex: 1 1 auto; min-width: 0; }
     .zone-name { font-weight: 700; }
     .zone-sub { color: var(--muted); font-size: .8rem; }
+    .zone-presence { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .pchip { font-size: .75rem; color: var(--muted); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
     .hist { display: grid; gap: 8px; }
     .hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; }
     .hist-when { color: var(--muted); font-size: .78rem; white-space: nowrap; }
@@ -112,6 +115,7 @@ import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate } from "/hub-sdk
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
+  presenceSummary,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult,
 } from "./logic.js";
 
@@ -125,6 +129,7 @@ const ME = window.__CURRENT_MEMBER ?? null;
 
 let members = [];
 let trackers = [];
+let presence = [];   // hub-derived home/away, family.presence
 let zones = [];
 let events = [];
 let tab = "zones";
@@ -168,13 +173,16 @@ async function mutateZone(method, body) {
 }
 
 async function loadContext() {
-  if (!CONTEXT) { members = []; trackers = []; return; }
+  if (!CONTEXT) { members = []; trackers = []; presence = []; return; }
   try {
-    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers`);
+    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence`);
     const ctx = await res.json();
     members = ctx["family.members"] ?? [];
     trackers = ctx["family.geofence_trackers"] ?? [];
-  } catch { members = []; trackers = []; }
+    // Empty whenever the household has location switched off or no home zone —
+    // the hub decides, this app only renders what it is handed.
+    presence = ctx["family.presence"] ?? [];
+  } catch { members = []; trackers = []; presence = []; }
 }
 
 async function loadZones() {
@@ -259,6 +267,7 @@ function zonesHtml() {
         <div class="zone-sub">${Math.round(z.radiusM)} m ·
           ${z.trackedMemberIds.map((id) => esc(memberName(id))).join(", ") || "nobody tracked"}
           ${z.active ? "" : " · paused"}</div>
+        ${presenceHtml(z)}
       </div>
       ${amAdult() ? `<button class="btn ghost" data-action="edit" data-id="${esc(z.id)}">Edit</button>` : ""}
     </div>`).join("");
@@ -266,6 +275,20 @@ function zonesHtml() {
     <div class="card"><div class="zone-list">${tiles}</div></div>
     ${amAdult() ? `<div class="btn-row"><button class="btn" data-action="new" ${zones.length >= MAX_ZONES ? "disabled" : ""}>＋ Add a zone</button></div>` : ""}
     ${trackers.length === 0 ? installHtml() : ""}`;
+}
+
+/** Who is home right now, on the home zone's tile only. */
+function presenceHtml(zone) {
+  const summary = presenceSummary(zone, presence, memberName);
+  if (!summary) return "";
+  const chip = (label, names) => names.length
+    ? `<span class="pchip">${label} ${esc(names.join(", "))}</span>`
+    : "";
+  return `<div class="zone-presence">
+    ${chip("\u{1F3E0}", summary.home)}
+    ${chip("\u{1F6B6}", summary.away)}
+    ${chip("\u{2753}", summary.unknown)}
+  </div>`;
 }
 
 function installHtml() {

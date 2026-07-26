@@ -16,7 +16,7 @@
     "events_table": "zone_events"
   },
   "data_access": {
-    "reads": ["family.members", "family.geofence_trackers"],
+    "reads": ["family.members", "family.geofence_trackers", "family.presence"],
     "writes": []
   },
   "permissions": {

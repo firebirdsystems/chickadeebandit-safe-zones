@@ -142,6 +142,28 @@ export function trackerBatteryLabel(tracker) {
   return `${tracker.batteryCharging ? "🔌" : "🔋"} ${Math.round(level)}%`;
 }
 
+/**
+ * Groups the hub's derived presence board (the `family.presence` context key)
+ * for display on the home zone's tile: { home: [names], away: [...], unknown: [...] }.
+ *
+ * Returns null for any zone that isn't the home zone — presence is anchored to
+ * that one boundary hub-side, so showing it on "School" would be a lie. Members
+ * absent from the board (untracked, or no phone enrolled) stay absent here: this
+ * reads the hub's answer rather than re-deriving one from the crossing history,
+ * which is owner_only with 30-day retention and would silently truncate.
+ */
+export function presenceSummary(zone, presence, nameOf) {
+  if (!zone?.isHome || !Array.isArray(presence) || presence.length === 0) return null;
+  const groups = { home: [], away: [], unknown: [] };
+  for (const entry of presence) {
+    if (!entry || typeof entry !== "object") continue;
+    const bucket = groups[entry.state] ?? groups.unknown;
+    bucket.push(nameOf(entry.memberId));
+  }
+  if (!groups.home.length && !groups.away.length && !groups.unknown.length) return null;
+  return groups;
+}
+
 export function trackerIsStale(tracker, nowMs, thresholdMs = 6 * 60 * 60 * 1000) {
   if (tracker.permissionState !== "granted_always") return true;
   const last = new Date(tracker.lastReportAt).getTime();

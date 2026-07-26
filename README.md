@@ -12,6 +12,11 @@ Geofenced safe-zone alerts for Chickadee Bandit — "Emma arrived at school."
   (30-day retention), and pushed to the configured audience.
 - **Trackers** show up via the `family.geofence_trackers` context key so this
   app can say "Dana's phone last reported 12 min ago / permission revoked".
+- **Who's home** comes from the hub's derived `family.presence` key (home/away
+  per member, no coordinates) and is shown on the home zone's tile only. The hub
+  owns the derivation: it degrades to "unknown" when a phone goes quiet and
+  returns nothing when location collection is off. This app never re-derives
+  presence from `zone_events` — that table is owner_only with 30-day retention.
 - **Premium**: requires the `geofence` capability (premium bundle).
 
 Dev: `make install && make build && make test`. `make dev` serves the app

@@ -3,6 +3,7 @@ import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult, MAX_GEOCODE_RESULTS,
+  presenceSummary,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -164,5 +165,43 @@ describe("parseZoneRow home flag", () => {
   });
   it("reads the is_home flag", () => {
     expect(parseZoneRow({ ...base, is_home: 1 }).isHome).toBe(true);
+  });
+});
+
+describe("presenceSummary", () => {
+  const nameOf = (id) => ({ m1: "Emma", m2: "Dana", m3: "Sam" })[id] ?? "Unknown";
+  const home = { id: "z1", name: "Home", isHome: true };
+  const school = { id: "z2", name: "School", isHome: false };
+  const board = [
+    { memberId: "m1", state: "home", since: "2026-07-25T07:00:00.000Z" },
+    { memberId: "m2", state: "away", since: "2026-07-25T08:00:00.000Z" },
+    { memberId: "m3", state: "unknown", since: null },
+  ];
+
+  it("groups the board by state for the home zone", () => {
+    expect(presenceSummary(home, board, nameOf)).toEqual({
+      home: ["Emma"], away: ["Dana"], unknown: ["Sam"],
+    });
+  });
+
+  it("shows nothing on a zone that is not home", () => {
+    // Presence is anchored to the home boundary hub-side; on "School" it would lie.
+    expect(presenceSummary(school, board, nameOf)).toBeNull();
+  });
+
+  it("shows nothing when the hub returns an empty board", () => {
+    // Location switched off, no home zone, or nobody enrolled.
+    expect(presenceSummary(home, [], nameOf)).toBeNull();
+    expect(presenceSummary(home, null, nameOf)).toBeNull();
+  });
+
+  it("skips malformed entries instead of throwing", () => {
+    expect(presenceSummary(home, [null, "junk", { memberId: "m1", state: "home" }], nameOf))
+      .toEqual({ home: ["Emma"], away: [], unknown: [] });
+  });
+
+  it("treats an unrecognized state as unknown rather than home", () => {
+    expect(presenceSummary(home, [{ memberId: "m1", state: "nonsense" }], nameOf))
+      .toEqual({ home: [], away: [], unknown: ["Emma"] });
   });
 });
