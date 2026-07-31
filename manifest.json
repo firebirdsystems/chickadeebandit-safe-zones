@@ -23,6 +23,22 @@
     "default_audience": "everyone",
     "requires_approval": false
   },
+    "member_references": {
+      "zones": [
+        {
+          "column": "tracked_member_ids",
+          "on_removed": "prune_list"
+        },
+        {
+          "column": "created_by",
+          "on_removed": "keep"
+        }
+      ],
+      "zone_events": {
+        "column": "member_id",
+        "on_removed": "delete"
+      }
+    },
   "row_policies": {
     "zones": {
       "kind": "endpoint_only",
