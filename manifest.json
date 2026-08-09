@@ -50,7 +50,8 @@
       "member_column": "member_id",
       "adults_bypass": true,
       "endpoint_writes_only": true,
-      "retain_days": { "default": 30, "timestamp_column": "received_at", "override_key": "zone_history" }
+      "retain_days": { "default": 30, "timestamp_column": "received_at", "override_key": "zone_history",
+        "tier": "transient" }
     }
   },
   "db_plaintext_columns": ["classification", "delivery_status"],
