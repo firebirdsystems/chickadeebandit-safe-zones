@@ -9,6 +9,11 @@
   "category": "family",
   "tags": ["family", "location", "geofence", "safety", "alerts", "premium"],
   "icon": "🛟",
+  "companion_app": {
+    "name": "Chickadee Locate",
+    "tagline": "Report zone crossings from the tracked person's phone",
+    "android_url": "https://play.google.com/store/apps/details?id=net.firebirdsystems.chickadeebandit.locate"
+  },
   "storage": "db",
   "required_capabilities": ["geofence"],
   "geofence_zones": {
