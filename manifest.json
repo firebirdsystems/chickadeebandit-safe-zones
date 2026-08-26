@@ -15,6 +15,9 @@
     "android_url": "https://play.google.com/store/apps/details?id=net.firebirdsystems.chickadeebandit.locate"
   },
   "storage": "db",
+  "preload": {
+    "zone_events": {"sql": "SELECT label, member_name, zone_name, type, occurred_at FROM app_safe_zones__zone_events WHERE classification <> 'duplicate' ORDER BY received_at DESC LIMIT 50"}
+  },
   "required_capabilities": ["geofence"],
   "geofence_zones": {
     "zones_table": "zones",
