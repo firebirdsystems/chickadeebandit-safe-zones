@@ -1,6 +1,6 @@
 {
   "name": "chickadeebandit-safe-zones",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Safe Zones — geofenced arrival/departure alerts for Chickadee Bandit",
   "type": "module",
   "scripts": {

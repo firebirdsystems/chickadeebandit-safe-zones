@@ -62,7 +62,7 @@
         "tier": "transient" }
     }
   },
-  "db_plaintext_columns": ["classification", "delivery_status"],
+  "db_plaintext_columns": ["classification", "delivery_status", "alert_audience"],
   "nav": { "label": "Safe Zones" },
   "glance": {
     "source": {
