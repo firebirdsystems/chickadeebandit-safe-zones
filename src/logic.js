@@ -78,18 +78,35 @@ export function parseZoneRow(row) {
 
 // --- Address search (geocoding) ----------------------------------------------
 
-export const GEOCODE_ENDPOINT = "https://nominatim.openstreetmap.org/search";
+/**
+ * The hub's geocoding proxy, not nominatim.openstreetmap.org directly.
+ *
+ * Their usage policy wants an identifying User-Agent and a rate limit on every
+ * caller. A browser can supply neither — it cannot set User-Agent at all — so
+ * this app, and the hub page that did the same thing, were both unidentified
+ * clients hitting an uncapped endpoint. That is what gets a caller blocked, and
+ * a block there and a block on their tile servers come from the same operators.
+ * The hub proxy adds the User-Agent, the cap and a cache; it also decides
+ * `format`, so this no longer sends one.
+ *
+ * Relative to the app's own base, NOT root-relative like the tile layer, and
+ * the difference is load-bearing. The app session cookie is scoped
+ * `Path=/run/{appId}`, so a browser never sends it to a hub-level `/api/…`
+ * path — a root-relative spelling would 401 every search on the app origin,
+ * which is where this app actually runs. The page carries
+ * `<base href="/run/{appId}/">`, so this resolves under that path in both
+ * placements. Tiles are exempt because they are public and carry no cookie.
+ */
+export const GEOCODE_ENDPOINT = "api/geocode";
 export const MAX_GEOCODE_RESULTS = 5;
 
-/** Builds the Nominatim search URL, or "" when the query is too short to be
- *  worth a request. Nominatim asks callers not to fire per-keystroke lookups,
- *  so callers must only hit this on an explicit search (Enter / button). */
+/** Builds the geocoding URL, or "" when the query is too short to be worth a
+ *  request. The geocoder asks callers not to fire per-keystroke lookups, so
+ *  callers must only hit this on an explicit search (Enter / button). */
 export function buildGeocodeUrl(query) {
   const q = String(query ?? "").trim();
   if (q.length < 3) return "";
-  const params = new URLSearchParams({
-    q, format: "jsonv2", limit: String(MAX_GEOCODE_RESULTS), addressdetails: "0",
-  });
+  const params = new URLSearchParams({ q, limit: String(MAX_GEOCODE_RESULTS) });
   return `${GEOCODE_ENDPOINT}?${params}`;
 }
 

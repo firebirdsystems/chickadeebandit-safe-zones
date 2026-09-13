@@ -110,9 +110,15 @@ describe("trackerBatteryLabel", () => {
 });
 
 describe("buildGeocodeUrl", () => {
-  it("builds an escaped Nominatim search URL", () => {
-    const url = new URL(buildGeocodeUrl(" 123 Main St, Springfield "));
-    expect(url.origin + url.pathname).toBe("https://nominatim.openstreetmap.org/search");
+  it("builds an escaped search URL against the hub proxy", () => {
+    const built = buildGeocodeUrl(" 123 Main St, Springfield ");
+    // Relative to the app's base, never root-relative and never absolute.
+    // Absolute would reach OpenStreetMap without the identifying User-Agent
+    // their policy requires — what got the estate blocked. Root-relative would
+    // escape `Path=/run/{appId}`, the app session cookie's scope, and 401.
+    expect(built.startsWith("api/geocode?")).toBe(true);
+    const url = new URL(built, "https://app.test/run/safe-zones/");
+    expect(url.pathname).toBe("/run/safe-zones/api/geocode");
     expect(url.searchParams.get("q")).toBe("123 Main St, Springfield");
     expect(url.searchParams.get("limit")).toBe(String(MAX_GEOCODE_RESULTS));
   });
