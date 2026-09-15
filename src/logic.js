@@ -2,7 +2,10 @@
 
 export const MIN_RADIUS_M = 150;   // iOS region monitoring is unreliable <100 m
 export const MAX_RADIUS_M = 5000;
-export const MAX_ZONES = 15;       // iOS caps an app at 20 OS regions; leave headroom
+// The PLATFORM ceiling: iOS caps an app at 20 OS regions, so no plan can sell
+// more than this. What a household may actually create is its plan CAP, which
+// the hub owns and can be lower (free tier) — see zoneCap in index.html.
+export const MAX_ZONES = 15;
 
 function strictNumber(value) {
   if (typeof value === "string" && value.trim() === "") return Number.NaN;
@@ -17,7 +20,7 @@ export function clampRadius(value) {
 }
 
 /** Validation for the zone editor. Returns a list of human-readable problems. */
-export function validateZone(zone, existingCount, editingExisting) {
+export function validateZone(zone, existingCount, editingExisting, cap = MAX_ZONES) {
   const problems = [];
   if (!String(zone.name ?? "").trim()) problems.push("Give the zone a name.");
   const lat = strictNumber(zone.lat);
@@ -32,8 +35,14 @@ export function validateZone(zone, existingCount, editingExisting) {
   if (!Array.isArray(zone.tracked_member_ids) || zone.tracked_member_ids.length === 0) {
     problems.push("Pick at least one member to track.");
   }
-  if (!editingExisting && existingCount >= MAX_ZONES) {
-    problems.push(`You can have at most ${MAX_ZONES} zones (phone OS limit).`);
+  // Two different refusals. At the platform ceiling there is nothing to sell;
+  // below it, the household is on a plan that allows fewer and upgrading is a
+  // real answer. Telling a paying household to "upgrade" is the one message
+  // worse than no message at all.
+  if (!editingExisting && existingCount >= cap) {
+    problems.push(cap < MAX_ZONES
+      ? `Your plan includes ${cap} safe zones. Your existing zones keep working — upgrade for up to ${MAX_ZONES}.`
+      : `You can have at most ${MAX_ZONES} zones (phone OS limit).`);
   }
   return problems;
 }

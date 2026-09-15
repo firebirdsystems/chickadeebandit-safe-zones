@@ -29,6 +29,32 @@ describe("validateZone", () => {
   it("accepts a complete zone", () => {
     expect(validateZone(good, 0, false)).toEqual([]);
   });
+
+  it("defaults to the platform ceiling when no plan cap is given", () => {
+    expect(validateZone(good, MAX_ZONES - 1, false)).toEqual([]);
+    expect(validateZone(good, MAX_ZONES, false)).toHaveLength(1);
+  });
+
+  it("refuses below the ceiling when the plan cap is lower, and offers the upgrade", () => {
+    expect(validateZone(good, 2, false, 3)).toEqual([]);
+    const problems = validateZone(good, 3, false, 3);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/upgrade/i);
+    expect(problems[0]).toContain("keep working");
+  });
+
+  it("does NOT offer an upgrade at the platform ceiling — there is nothing to sell", () => {
+    const problems = validateZone(good, MAX_ZONES, false, MAX_ZONES);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).not.toMatch(/upgrade/i);
+    expect(problems[0]).toMatch(/phone OS limit/);
+  });
+
+  it("lets an over-cap household still EDIT the zones it has (grandfathering)", () => {
+    // A household that dropped below its zone count keeps every zone and must
+    // be able to rename or re-point them; only a NEW zone is refused.
+    expect(validateZone({ ...good, id: "z1" }, 8, true, 3)).toEqual([]);
+  });
   it("requires a name, a spot, a sane radius, and a tracked member", () => {
     expect(validateZone({ ...good, name: " " }, 0, false)).toHaveLength(1);
     expect(validateZone({ ...good, lat: "" }, 0, false)).toHaveLength(1);

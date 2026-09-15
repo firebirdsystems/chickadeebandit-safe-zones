@@ -135,7 +135,16 @@ let events = [];
 let tab = "zones";
 let editing = null;      // zone draft being edited (null = list view)
 let error = "";
-let capabilityBlocked = false;
+// What this household may CREATE. Optimistic until the hub says otherwise:
+// the app cannot read the plan, so it assumes the ceiling and narrows on the
+// first zone_limit refusal, which carries the real numbers. MAX_ZONES stays
+// the platform ceiling and never moves.
+let zoneCap = MAX_ZONES;
+// Zones held across EVERY declaring app, which is what the cap is enforced
+// against. null until the hub tells us; the local zones.length is only this
+// app's share and under-reports whenever a sibling app holds zones too.
+let zoneUsed = null;
+let upgradeBundle = null;
 let zonesDenied = false; // non-adult viewer: zones read is adult-only → history-only mode
 let map = null;
 let mapCircle = null;
@@ -151,7 +160,6 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  if (res.status === 402) { capabilityBlocked = true; return { rows: [], status: 402 }; }
   if (res.status === 403) return { rows: [], status: 403 };
   if (!res.ok) throw new Error(`db ${res.status}`);
   const payload = await res.json();
@@ -164,25 +172,88 @@ async function mutateZone(method, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 402) { capabilityBlocked = true; throw new Error("capability_required"); }
   if (!res.ok) {
     const payload = await res.json().catch(() => ({}));
+    // Keyed on `error`, never on the status: the hub also returns 507 when the
+    // household is out of DB storage, which is a different refusal entirely.
+    if (payload.error === "zone_limit") {
+      if (Number.isFinite(payload.cap)) {
+        zoneCap = payload.cap;
+        // The refusal is itself evidence the household is at the cap — even if
+        // our count says otherwise, because a sibling app holds the difference.
+        zoneUsed = zoneUsed === null ? payload.cap : Math.max(zoneUsed, payload.cap);
+      }
+      if (payload.bundle) upgradeBundle = payload.bundle;
+      const err = new Error("zone_limit");
+      err.zoneLimit = true;
+      throw err;
+    }
     throw new Error(payload.error || `zone ${res.status}`);
   }
   return res.json();
 }
 
+// The plan allowance. Only the hub can answer it: the cap is enforced across
+// every app declaring geofence_zones, so counting our own table would
+// under-report as soon as a second one is installed. Absent (an older hub)
+// leaves the optimistic ceiling in place, and the zone_limit refusal still
+// corrects it.
+function applyLimits(limits) {
+  if (!limits || !Number.isFinite(limits.cap)) return;
+  zoneCap = limits.cap;
+  // Only overwrite the count when the hub actually sent one. Clearing it back
+  // to null would drop us to `zones.length`, which counts only THIS app's
+  // zones — throwing away a cross-app number we already had for a field the
+  // hub simply omitted.
+  if (Number.isFinite(limits.used)) zoneUsed = limits.used;
+}
+
 async function loadContext() {
   if (!CONTEXT) { members = []; trackers = []; presence = []; return; }
   try {
-    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence`);
+    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence,family.geofence_limits`);
     const ctx = await res.json();
     members = ctx["family.members"] ?? [];
     trackers = ctx["family.geofence_trackers"] ?? [];
     // Empty whenever the household has location switched off or no home zone —
     // the hub decides, this app only renders what it is handed.
     presence = ctx["family.presence"] ?? [];
+    applyLimits(ctx["family.geofence_limits"]);
   } catch { members = []; trackers = []; presence = []; }
+}
+
+/**
+ * Move the used count by a zone we just created or deleted.
+ *
+ * `zoneUsed` gates the counter, the "Add a zone" button and validateZone, so a
+ * value fixed at boot latches: delete at the cap and the button stays disabled
+ * for the life of the page; create and the count stays low enough to compose an
+ * over-cap zone and take a 507. Applied SYNCHRONOUSLY, before the re-render, so
+ * the save reads as instant — the authoritative re-read below then costs the
+ * user nothing they are waiting on.
+ *
+ * Skipped while the count is null (an older hub that does not serve the key):
+ * there is nothing to move, and the render falls back to `zones.length`.
+ */
+function bumpUsed(delta) {
+  if (zoneUsed !== null) zoneUsed = Math.max(0, zoneUsed + delta);
+}
+
+/**
+ * Re-read the household's allowance from the hub.
+ *
+ * The local bump is only ever right about OUR change; the hub is the only thing
+ * that counts sibling apps' zones, and it is also where a plan change shows up.
+ * Failure is survivable precisely because the bump already moved the number in
+ * the right direction.
+ */
+async function refreshLimits() {
+  if (!CONTEXT) return;
+  try {
+    const res = await fetch(`${CONTEXT}?keys=family.geofence_limits`);
+    if (!res.ok) return;
+    applyLimits((await res.json())["family.geofence_limits"]);
+  } catch { /* the local bump stands */ }
 }
 
 async function loadZones() {
@@ -206,20 +277,10 @@ function render() {
   const root = document.getElementById("root");
   root.className = "";
 
-  if (capabilityBlocked) {
-    root.innerHTML = `
-      <div class="empty card">
-        <h2>🛟 Safe Zones is a Premium feature</h2>
-        <p class="muted">Zone alerts need the hub to watch for arrivals and send pushes.
-        Upgrade to Premium in Settings → Billing to turn it on.</p>
-      </div>`;
-    return;
-  }
-
   let html = `
     <div class="topbar">
       <h1>🛟 Safe Zones</h1>
-      ${zonesDenied ? "" : `<span class="tiny muted">${zones.length}/${MAX_ZONES} zones</span>`}
+      ${zonesDenied ? "" : `<span class="tiny muted">${zoneUsed ?? zones.length}/${zoneCap} zones</span>`}
     </div>
     ${error ? `<div class="error">${esc(error)}</div>` : ""}
     ${trackerBannersHtml()}
@@ -273,7 +334,7 @@ function zonesHtml() {
     </div>`).join("");
   return `
     <div class="card"><div class="zone-list">${tiles}</div></div>
-    ${amAdult() ? `<div class="btn-row"><button class="btn" data-action="new" ${zones.length >= MAX_ZONES ? "disabled" : ""}>＋ Add a zone</button></div>` : ""}
+    ${amAdult() ? `<div class="btn-row"><button class="btn" data-action="new" ${(zoneUsed ?? zones.length) >= zoneCap ? "disabled" : ""}>＋ Add a zone</button></div>` : ""}
     ${trackers.length === 0 ? installHtml() : ""}`;
 }
 
@@ -503,7 +564,7 @@ async function saveZone(root) {
   error = "";
   readEditorInputs(root);
   const z = editing;
-  const problems = validateZone(z, zones.length, !!z.id);
+  const problems = validateZone(z, zoneUsed ?? zones.length, !!z.id, zoneCap);
   if (Array.isArray(z.alert_audience) && z.alert_audience.length === 0) {
     problems.push("Pick at least one person to alert (or choose All adults).");
   }
@@ -522,11 +583,21 @@ async function saveZone(root) {
       active: z.active,
       isHome: z.is_home,
     });
+    const created = !z.id;
+    if (created) bumpUsed(1);
     editing = null; map = null; mapCircle = null; error = ""; resetSearch();
     await loadZones();
     render();
-  } catch {
-    error = "Couldn't save the zone. Try again.";
+    // After the render, never before it: the count on screen is already right
+    // for our own change, so the user waits on nothing while the hub confirms
+    // it and folds in anything a sibling app did.
+    if (created) { await refreshLimits(); render(); }
+  } catch (e) {
+    error = e?.zoneLimit
+      ? (zoneCap < MAX_ZONES
+        ? `You're using all ${zoneCap} safe zones on your plan. Your existing zones keep working and keep alerting${upgradeBundle ? ` — upgrade to Premium in Settings → Billing for up to ${MAX_ZONES}` : ""}.`
+        : `You can have at most ${MAX_ZONES} zones (phone OS limit). Remove one to add another.`)
+      : "Couldn't save the zone. Try again.";
     render();
   }
 }
@@ -541,8 +612,11 @@ async function deleteZone() {
   if (!ok) return;
   try {
     await mutateZone("DELETE", { id: editing.id });
+    bumpUsed(-1);
     editing = null; map = null; mapCircle = null; resetSearch();
     await loadZones();
+    render();
+    await refreshLimits();
     render();
   } catch {
     error = "Couldn't delete the zone.";
