@@ -2,9 +2,13 @@
 
 Geofenced safe-zone alerts for Chickadee Bandit — "Emma arrived at school."
 
-- **Zones** are drawn on a map in this app (adults only), 150 m–5 km radius,
-  max 15 (phone OS region limits). A trusted Hub endpoint validates geometry,
-  members, audience, and the count ceiling; direct SQL writes are blocked.
+- **Zones** are drawn on a map in this app (adults only), 150 m–5 km radius.
+  Three per household plan, fifteen with the Premium `geofence` capability;
+  fifteen is also the hard platform ceiling (phone OS region limits) and nothing
+  is sold above it. The cap applies when a zone is CREATED — a household that
+  drops below its zone count keeps every existing zone alerting. A trusted Hub
+  endpoint validates geometry, members, audience, and the count ceiling; direct
+  SQL writes are blocked.
   Geometry is stored in the app DB and encrypted by default.
 - **Crossings** are asserted by the authenticated **Chickadee Locate** companion app on the
   tracked person's phone, judged hub-side (`/api/geofence/event`: dedupe,
