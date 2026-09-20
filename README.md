@@ -1,5 +1,7 @@
 # Safe Zones
 
+A [Chickadee Bandit](https://chickadeebandit.com/app-library/safe-zones) app.
+
 Geofenced safe-zone alerts for Chickadee Bandit — "Emma arrived at school."
 
 - **Zones** are drawn on a map in this app (adults only), 150 m–5 km radius.
