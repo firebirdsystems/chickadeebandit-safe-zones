@@ -3,11 +3,11 @@
   "contexts": ["household", "shared_space"],
   "name": "Safe Zones",
   "version": "1.0.0",
-  "description": "Geofenced safe-zone alerts — get a push when a family member arrives at school, home, or practice. Adults draw zones on a map; the tracked person's phone runs the Chickadee Locate companion app, which reports zone crossings to the hub. Three zones on every household plan; Premium raises that to fifteen.",
+  "description": "Geofenced safe-zone alerts — get a push when a family member arrives at school, home, or practice. Adults draw zones on a map; the tracked person's phone runs the Chickadee Locate companion app, which reports zone crossings to the hub. Up to fifteen zones on every household plan.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "family",
-  "tags": ["family", "location", "geofence", "safety", "alerts", "premium"],
+  "tags": ["family", "location", "geofence", "safety", "alerts"],
   "icon": "🛟",
   "companion_app": {
     "name": "Chickadee Locate",

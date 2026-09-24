@@ -595,7 +595,7 @@ async function saveZone(root) {
   } catch (e) {
     error = e?.zoneLimit
       ? (zoneCap < MAX_ZONES
-        ? `You're using all ${zoneCap} safe zones on your plan. Your existing zones keep working and keep alerting${upgradeBundle ? ` — upgrade to Premium in Settings → Billing for up to ${MAX_ZONES}` : ""}.`
+        ? `You're using all ${zoneCap} safe zones on your plan. Your existing zones keep working and keep alerting${upgradeBundle ? ` — renew in Settings → Billing for up to ${MAX_ZONES}` : ""}.`
         : `You can have at most ${MAX_ZONES} zones (phone OS limit). Remove one to add another.`)
       : "Couldn't save the zone. Try again.";
     render();
