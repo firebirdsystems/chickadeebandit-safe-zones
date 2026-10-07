@@ -111,7 +111,7 @@
 </div>
 
 <script type="module">
-import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate } from "/hub-sdk.js";
+import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate, glyph } from "/hub-sdk.js";
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
@@ -279,7 +279,7 @@ function render() {
 
   let html = `
     <div class="topbar">
-      <h1>🛟 Safe Zones</h1>
+      <h1>${glyph("geofence")} Safe Zones</h1>
       ${zonesDenied ? "" : `<span class="tiny muted">${zoneUsed ?? zones.length}/${zoneCap} zones</span>`}
     </div>
     ${error ? `<div class="error">${esc(error)}</div>` : ""}
