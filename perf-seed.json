@@ -1,0 +1,742 @@
+{
+ "seed": [
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-45 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-45 days'), 1)",
+   "params": [
+    "szz-1",
+    "Home",
+    "44.4759",
+    "-73.2121",
+    "200",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-43 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-43 days'), 0)",
+   "params": [
+    "szz-2",
+    "Edmunds Middle School",
+    "44.4803",
+    "-73.2046",
+    "250",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-41 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-41 days'), 0)",
+   "params": [
+    "szz-3",
+    "Office",
+    "44.4781",
+    "-73.2133",
+    "180",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days'), 0)",
+   "params": [
+    "szz-4",
+    "Grandma's house",
+    "44.4912",
+    "-73.1857",
+    "200",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-37 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-37 days'), 0)",
+   "params": [
+    "szz-5",
+    "Soccer fields",
+    "44.4588",
+    "-73.2192",
+    "400",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zones (id, name, lat, lng, radius_m, tracked_member_ids, alert_audience, alert_on_enter, alert_on_exit, active, created_by, created_at, updated_at, is_home) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-35 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-35 days'), 0)",
+   "params": [
+    "szz-6",
+    "Lake house",
+    "44.6320",
+    "-73.2710",
+    "500",
+    "[]",
+    "adults",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-180 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-180 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-01",
+    "perf-report-01",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-204 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-204 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-02",
+    "perf-report-02",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-216 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-216 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-03",
+    "perf-report-03",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-240 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-240 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-04",
+    "perf-report-04",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-750 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-750 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-05",
+    "perf-report-05",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-780 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-780 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-06",
+    "perf-report-06",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1620 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-1620 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-07",
+    "perf-report-07",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1644 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-1644 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-08",
+    "perf-report-08",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1656 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-1656 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-09",
+    "perf-report-09",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1680 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-1680 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-10",
+    "perf-report-10",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2190 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-2190 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-11",
+    "perf-report-11",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2220 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-2220 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-12",
+    "perf-report-12",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3000 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-3000 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-13",
+    "perf-report-13",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3036 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-3036 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-14",
+    "perf-report-14",
+    "szz-5",
+    "Soccer fields",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Soccer fields",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3144 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-3144 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-15",
+    "perf-report-15",
+    "szz-5",
+    "Soccer fields",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Soccer fields",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3180 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-3180 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-16",
+    "perf-report-16",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4434 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4434 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-17",
+    "perf-report-17",
+    "szz-4",
+    "Grandma's house",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Grandma's house",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4440 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4440 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-18",
+    "perf-report-18",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4476 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4476 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-19",
+    "perf-report-19",
+    "szz-5",
+    "Soccer fields",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Soccer fields",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4530 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4530 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-20",
+    "perf-report-20",
+    "szz-4",
+    "Grandma's house",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Grandma's house",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4584 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4584 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-21",
+    "perf-report-21",
+    "szz-5",
+    "Soccer fields",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Soccer fields",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4620 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4620 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-22",
+    "perf-report-22",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5940 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-5940 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-23",
+    "perf-report-23",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5964 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-5964 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-24",
+    "perf-report-24",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5976 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-5976 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-25",
+    "perf-report-25",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6000 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-6000 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-26",
+    "perf-report-26",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6510 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-6510 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-27",
+    "perf-report-27",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6540 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-6540 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-28",
+    "perf-report-28",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7380 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7380 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-29",
+    "perf-report-29",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7404 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7404 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-30",
+    "perf-report-30",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7416 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7416 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-31",
+    "perf-report-31",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7440 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7440 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-32",
+    "perf-report-32",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7950 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7950 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-33",
+    "perf-report-33",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7980 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7980 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-34",
+    "perf-report-34",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8820 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8820 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-35",
+    "perf-report-35",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8844 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8844 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-36",
+    "perf-report-36",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8856 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8856 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-37",
+    "perf-report-37",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8880 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8880 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-38",
+    "perf-report-38",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9390 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-9390 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-39",
+    "perf-report-39",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Office",
+    "record_silent",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9420 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-9420 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-40",
+    "perf-report-40",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10260 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10260 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-41",
+    "perf-report-41",
+    "szz-1",
+    "Home",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Home",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10284 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10284 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-42",
+    "perf-report-42",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10296 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10296 minutes','+4 seconds'), ?, 1, 1, ?)",
+   "params": [
+    "sze-43",
+    "perf-report-43",
+    "szz-2",
+    "Edmunds Middle School",
+    "{{me}}",
+    "Adam",
+    "enter",
+    "Adam arrived at Edmunds Middle School",
+    "record_and_alert",
+    "delivered"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_safe_zones__zone_events (id, report_id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, classification, alert_requested, alerted, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10320 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10320 minutes','+4 seconds'), ?, 0, 0, ?)",
+   "params": [
+    "sze-44",
+    "perf-report-44",
+    "szz-3",
+    "Office",
+    "{{me}}",
+    "Adam",
+    "exit",
+    "Adam left Office",
+    "record_silent",
+    "delivered"
+   ]
+  }
+ ]
+}
