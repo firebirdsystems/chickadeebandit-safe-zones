@@ -1,5 +1,7 @@
 // Pure zone helpers — no DOM, no fetch — so __tests__ can exercise them.
 
+import { isAdult } from "./shared.js";
+
 export const MIN_RADIUS_M = 150;   // iOS region monitoring is unreliable <100 m
 export const MAX_RADIUS_M = 5000;
 // The PLATFORM ceiling: iOS caps an app at 20 OS regions, so no plan can sell
@@ -194,4 +196,26 @@ export function trackerIsStale(tracker, nowMs, thresholdMs = 6 * 60 * 60 * 1000)
   if (tracker.permissionState !== "granted_always") return true;
   const last = new Date(tracker.lastReportAt).getTime();
   return Number.isNaN(last) || nowMs - last >= thresholdMs;
+}
+
+/**
+ * Whether a member sees other members' zone crossings. Mirrors the hub's rule
+ * for the zone_events table (owner_only with adults_bypass): any adult in a
+ * household, and only the steward in a shared space. Anyone else is returned
+ * their own crossings alone.
+ */
+export function supervisesZoneActivity(member, { tenantKind = "household", isAdmin = false } = {}) {
+  return tenantKind === "household" ? isAdult(member) : isAdmin === true;
+}
+
+/**
+ * The line above the history list for someone who sees only their own
+ * crossings, or "" for someone who sees everyone's. A child is also told why
+ * there is no Zones tab; an adult taking part in a shared space is told who
+ * does see the rest.
+ */
+export function ownActivityNote(member, tenant) {
+  if (supervisesZoneActivity(member, tenant)) return "";
+  if (!isAdult(member)) return "Zones are managed by adults. This is your own zone activity.";
+  return "This is your own zone activity. In a shared space, the steward sees everyone's.";
 }

@@ -9,5 +9,5 @@ export function esc(str) {
 }
 
 export function isAdult(member) {
-  return member?.role === "adult";
+  return !!member && (member.role === "adult" || member.role === "admin");
 }

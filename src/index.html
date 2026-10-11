@@ -117,6 +117,7 @@ import {
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   presenceSummary,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult,
+  ownActivityNote,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -126,6 +127,7 @@ const APP_ID = window.__APP_ID ?? "safe-zones";
 // for the hub's own screens — only /run/{appId}/... exists on this origin.
 const ZONE_MANAGE = `/run/${APP_ID}/api/geofence/zones/manage`;
 const ME = window.__CURRENT_MEMBER ?? null;
+const TENANT = { tenantKind: window.__TENANT_KIND ?? "household", spaceKind: window.__SPACE_KIND ?? null, isAdmin: window.__IS_ADMIN === true };
 
 let members = [];
 let trackers = [];
@@ -211,7 +213,8 @@ function applyLimits(limits) {
 async function loadContext() {
   if (!CONTEXT) { members = []; trackers = []; presence = []; return; }
   try {
-    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence,family.geofence_limits`);
+    // Not from the browser's cache, for the count's sake: see refreshLimits.
+    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence,family.geofence_limits`, { cache: "no-store" });
     const ctx = await res.json();
     members = ctx["family.members"] ?? [];
     trackers = ctx["family.geofence_trackers"] ?? [];
@@ -250,7 +253,10 @@ function bumpUsed(delta) {
 async function refreshLimits() {
   if (!CONTEXT) return;
   try {
-    const res = await fetch(`${CONTEXT}?keys=family.geofence_limits`);
+    // Never from the browser's cache: the hub lets a context read be reused for
+    // half a minute, and a second change inside that window was answered with
+    // the count from before it, written over the bump that had it right.
+    const res = await fetch(`${CONTEXT}?keys=family.geofence_limits`, { cache: "no-store" });
     if (!res.ok) return;
     applyLimits((await res.json())["family.geofence_limits"]);
   } catch { /* the local bump stands */ }
@@ -263,7 +269,18 @@ async function loadZones() {
   zones = (rows ?? []).map(parseZoneRow).filter(Boolean);
 }
 
+let eventsFailed = false;
 async function loadEvents() {
+  eventsFailed = false;
+  try {
+    await readEvents();
+  } catch (e) {
+    eventsFailed = true;
+    throw e;
+  }
+}
+
+async function readEvents() {
   const { rows } = await db("SELECT label, member_name, zone_name, type, occurred_at FROM app_safe_zones__zone_events WHERE classification <> 'duplicate' ORDER BY received_at DESC LIMIT 50");
   events = rows ?? [];
 }
@@ -280,7 +297,7 @@ function render() {
   let html = `
     <div class="topbar">
       <h1>${glyph("geofence")} Safe Zones</h1>
-      ${zonesDenied ? "" : `<span class="tiny muted">${zoneUsed ?? zones.length}/${zoneCap} zones</span>`}
+      ${zonesDenied ? "" : `<span class="tiny muted" id="zone-count">${esc(countLabel())}</span>`}
     </div>
     ${error ? `<div class="error">${esc(error)}</div>` : ""}
     ${trackerBannersHtml()}
@@ -295,6 +312,19 @@ function render() {
   if (editing) initMap();
   const autofocus = root.querySelector("[data-autofocus]");
   if (autofocus) autofocus.focus();
+}
+
+function countLabel() { return `${zoneUsed ?? zones.length}/${zoneCap} zones`; }
+
+/**
+ * After a limits re-read. With the editor open only the counter is repainted:
+ * a full render rebuilds the map, and dropped wherever the adult had panned
+ * to, for a number in the corner.
+ */
+function renderCount() {
+  if (!editing) { render(); return; }
+  const count = document.getElementById("zone-count");
+  if (count) count.textContent = countLabel();
 }
 
 function trackerBannersHtml() {
@@ -317,7 +347,7 @@ function zonesHtml() {
         <h2>No safe zones yet</h2>
         <p class="muted">Draw a circle around school, home, or practice and get a push
         when a tracked family member arrives or leaves.</p>
-        ${amAdult() ? '<p style="margin-top:12px"><button class="btn" data-action="new">＋ Add a zone</button></p>' : '<p class="tiny muted">An adult can add zones.</p>'}
+        ${amAdult() ? `<p style="margin-top:12px"><button class="btn" data-action="new" ${(zoneUsed ?? zones.length) >= zoneCap ? "disabled" : ""}>＋ Add a zone</button></p>` : '<p class="tiny muted">An adult can add zones.</p>'}
       </div>` + install;
   }
   const tiles = zones.map((z) => `
@@ -391,7 +421,7 @@ function editorHtml() {
       </div>
       <div id="map"></div>
       <p class="tiny muted" style="margin-bottom:10px">Search for an address or tap the map to place the zone.
-        ${z.lat !== "" ? `Center: ${Number(z.lat).toFixed(5)}, ${Number(z.lng).toFixed(5)}` : "No spot picked yet."}</p>
+        <span id="spot-label">${esc(spotLabel(z))}</span></p>
       <div class="field">
         <label for="zradius">Radius — <span id="radius-label">${clampRadius(z.radius_m)}</span> m</label>
         <input type="range" id="zradius" min="${MIN_RADIUS_M}" max="${MAX_RADIUS_M}" step="10" value="${clampRadius(z.radius_m)}">
@@ -429,6 +459,10 @@ function editorHtml() {
     </div>`;
 }
 
+function spotLabel(z) {
+  return z.lat !== "" ? `Center: ${Number(z.lat).toFixed(5)}, ${Number(z.lng).toFixed(5)}` : "No spot picked yet.";
+}
+
 function searchResultsHtml() {
   if (searchMessage) return `<p class="tiny muted search-note">${esc(searchMessage)}</p>`;
   if (!searchResults.length) return "";
@@ -439,11 +473,16 @@ function searchResultsHtml() {
 }
 
 function historyHtml() {
-  // Non-adults land here directly: zones are adult-managed and the history the
-  // hub returns is already scoped to their own crossings by the row policy.
-  const note = zonesDenied
-    ? '<p class="tiny muted" style="margin-bottom:8px">Zones are managed by adults. This is your own zone activity.</p>'
-    : "";
+  // Non-adults land here directly: zones are adult-managed. The history the
+  // hub returns is scoped by the row policy to the viewer's own crossings
+  // unless they supervise (an adult at home, the steward in a shared space),
+  // so everyone else is told whose activity this is.
+  const viewer = ME ? (members.find((m) => m.id === ME.id) ?? ME) : null;
+  const noteText = zonesDenied ? ownActivityNote(null, TENANT) : ownActivityNote(viewer, TENANT);
+  const note = noteText ? `<p class="tiny muted" style="margin-bottom:8px">${esc(noteText)}</p>` : "";
+  // A read that failed is not an empty history, and a viewer with no tabs has
+  // no other way to ask again.
+  if (eventsFailed) return note + '<div class="error" role="alert">Couldn\'t load zone activity. <button class="btn ghost" data-action="reload-history">Try again</button></div>';
   if (!events.length) return note + '<div class="empty card">No zone activity in the last 30 days.</div>';
   const rows = events.map((e) => `
     <div class="hist-row">
@@ -464,7 +503,10 @@ function initMap() {
   // instance's listeners before building a new one.
   if (map) { try { map.remove(); } catch { /* container already gone */ } }
   mapCircle = null;
-  map = L.map(el, { zoomControl: true, attributionControl: false });
+  // worldCopyJump: panning across the date line moves the view onto the real
+  // world, so a tap, and the circle drawn for it, land where the finger is.
+  // Without it the circle was drawn a whole world away from the tap.
+  map = L.map(el, { zoomControl: true, attributionControl: false, worldCopyJump: true });
   // Tiles come from the hub, not straight from OSM. Their tile usage policy
   // disallows both halves of what this used to send — the deprecated {s}
   // sharding subdomains, and a client with no identifying User-Agent, which a
@@ -478,9 +520,16 @@ function initMap() {
   else map.setView([39.5, -98.35], 4);
   if (hasSpot) drawCircle();
   map.on("click", (ev) => {
-    z.lat = String(ev.latlng.lat);
-    z.lng = String(ev.latlng.lng);
+    // Wrapped into -180..180: on a map panned across the date line a tap
+    // reports the longitude of the repeated world it landed on (-210 for
+    // Japan seen west of America), which no save would then accept.
+    const at = ev.latlng.wrap();
+    z.lat = String(at.lat);
+    z.lng = String(at.lng);
     drawCircle();
+    // No re-render (it would rebuild the map), so the line under it is set here.
+    const label = document.getElementById("spot-label");
+    if (label) label.textContent = spotLabel(z);
   });
 }
 
@@ -517,6 +566,32 @@ function readEditorInputs(root) {
 
 function resetSearch() {
   searchQuery = ""; searchResults = []; searchBusy = false; searchMessage = "";
+  searchGen++;   // an answer still on its way belongs to the editor that asked
+}
+let searchGen = 0;
+
+/** Takes the map down with its listeners. Forgetting the instance instead left
+ *  each one alive, with its resize listener, for the life of the page. */
+function dropMap() {
+  if (map) { try { map.remove(); } catch { /* container already gone */ } }
+  map = null; mapCircle = null;
+}
+
+/** Leaves the editor for the list. */
+function closeEditor() {
+  editing = null; dropMap(); resetSearch();
+}
+
+/**
+ * render() for a continuation that lands after an await. The editor is rebuilt
+ * from `editing`, and most of its fields reach `editing` only when they are
+ * read, so whatever was typed or ticked while the request was out is read
+ * first; a bare render() there threw it away.
+ */
+function renderKeepingEdits() {
+  const root = document.getElementById("root");
+  if (editing && root.querySelector("#zname")) readEditorInputs(root);
+  render();
 }
 
 /** Looks the typed address up on demand — never per keystroke, which the
@@ -533,18 +608,43 @@ async function runAddressSearch(root) {
     return;
   }
   searchBusy = true; searchMessage = ""; searchResults = [];
-  render();
+  const gen = ++searchGen;
+  paintSearch(root);
+  let results = [];
+  let message = "";
   try {
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`geocode ${res.status}`);
-    searchResults = parseGeocodeResults(await res.json());
-    searchMessage = searchResults.length ? "" : "No places matched that address.";
+    results = parseGeocodeResults(await res.json());
+    message = results.length ? "" : "No places matched that address.";
   } catch {
-    searchResults = [];
-    searchMessage = "Couldn't look that address up. Try again, or tap the map.";
+    message = "Couldn't look that address up. Try again, or tap the map.";
   }
-  searchBusy = false;
-  render();
+  // The editor that asked was closed, or another zone opened, meanwhile.
+  if (gen !== searchGen || !editing) return;
+  searchResults = results; searchMessage = message; searchBusy = false;
+  paintSearch(root);
+}
+
+/**
+ * Redraws the search button and its results where they stand. The rest of the
+ * editor is left alone: a full render for these rebuilt the map, moved focus
+ * to the search box under whatever the adult was typing, and read back fields
+ * it had no reason to touch.
+ */
+function paintSearch(root) {
+  const button = root.querySelector('[data-action="search"]');
+  if (button) { button.disabled = searchBusy; button.textContent = searchBusy ? "Searching…" : "Search"; }
+  const list = root.querySelector("#search-results");
+  if (!list) return;
+  list.innerHTML = searchResultsHtml();
+  wireResults(root);
+}
+
+function wireResults(root) {
+  root.querySelectorAll("[data-result]").forEach((btn) => btn.addEventListener("click", () => {
+    pickSearchResult(root, Number(btn.dataset.result));
+  }));
 }
 
 function pickSearchResult(root, index) {
@@ -556,11 +656,28 @@ function pickSearchResult(root, index) {
   if (!String(editing.name).trim()) editing.name = zoneNameFromResult(hit);
   searchResults = [];
   searchMessage = "";
-  map = null; mapCircle = null;   // re-created centered on the picked address
+  dropMap();   // re-created centered on the picked address
   render();
 }
 
+// One zone write at a time: a second tap on Create while the first is still
+// out sent a second zone.
+let writing = false;
+
+/** The re-read after a zone write that already landed. A failure here is not
+ *  the write failing, and saying so sent people to create the zone again. */
+async function reloadZonesAfterWrite(done = "Saved") {
+  try {
+    await loadZones();
+  } catch {
+    error = `${done}, but the list could not refresh. Reload to see it.`;
+  }
+}
+
+const STILL_WRITING = ["Still finishing the last change.", { description: "Try again in a moment." }];
+
 async function saveZone(root) {
+  if (writing) { hubAlert(...STILL_WRITING); return; }
   error = "";
   readEditorInputs(root);
   const z = editing;
@@ -569,6 +686,11 @@ async function saveZone(root) {
     problems.push("Pick at least one person to alert (or choose All adults).");
   }
   if (problems.length) { await hubAlert(problems[0]); return; }
+  writing = true;
+  // Said on the button: the write is several round trips, and with nothing on
+  // screen a second tap or a walk to another zone looked like the way forward.
+  const saveButton = root.querySelector('[data-action="save"]');
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = "Saving…"; }
   try {
     await mutateZone("POST", {
       ...(z.id ? { id: z.id } : {}),
@@ -583,23 +705,32 @@ async function saveZone(root) {
       active: z.active,
       isHome: z.is_home,
     });
-    const created = !z.id;
-    if (created) bumpUsed(1);
-    editing = null; map = null; mapCircle = null; error = ""; resetSearch();
-    await loadZones();
-    render();
-    // After the render, never before it: the count on screen is already right
-    // for our own change, so the user waits on nothing while the hub confirms
-    // it and folds in anything a sibling app did.
-    if (created) { await refreshLimits(); render(); }
   } catch (e) {
+    writing = false;
+    const elsewhere = editing !== z;   // the adult has moved on to another zone, or to the list
     error = e?.zoneLimit
       ? (zoneCap < MAX_ZONES
         ? `You're using all ${zoneCap} safe zones on your plan. Your existing zones keep working and keep alerting${upgradeBundle ? ` — renew in Settings → Billing for up to ${MAX_ZONES}` : ""}.`
         : `You can have at most ${MAX_ZONES} zones (phone OS limit). Remove one to add another.`)
-      : "Couldn't save the zone. Try again.";
-    render();
+      : !elsewhere ? "Couldn't save the zone. Try again."
+      // A zone that was being created has nothing to open: it has to be added again.
+      : z.id ? `Couldn't save "${z.name.trim()}". Open it and try again.` : `Couldn't create "${z.name.trim()}". Add it again.`;
+    // Whatever was typed after the tap is read back first, in this editor or another.
+    renderKeepingEdits();
+    return;
   }
+  const created = !z.id;
+  if (created) bumpUsed(1);
+  // Only the editor that asked is closed. A draft opened since is the adult's
+  // current work and stays, with what they have typed into it.
+  if (editing === z) { closeEditor(); render(); }
+  await reloadZonesAfterWrite();
+  writing = false;
+  renderKeepingEdits();
+  // After the render, never before it: the count on screen is already right
+  // for our own change, so the user waits on nothing while the hub confirms
+  // it and folds in anything a sibling app did.
+  if (created) { await refreshLimits(); renderCount(); }
 }
 
 async function deleteZone() {
@@ -609,30 +740,55 @@ async function deleteZone() {
     confirmLabel: "Delete",
     destructive: true,
   });
-  if (!ok) return;
+  if (!ok || !editing) return;
+  if (writing) { hubAlert(...STILL_WRITING); return; }
+  const z = editing;
+  writing = true;
+  error = "";
+  const deleteButton = document.querySelector('#root [data-action="delete"]');
+  if (deleteButton) { deleteButton.disabled = true; deleteButton.textContent = "Deleting…"; }
   try {
-    await mutateZone("DELETE", { id: editing.id });
-    bumpUsed(-1);
-    editing = null; map = null; mapCircle = null; resetSearch();
-    await loadZones();
-    render();
-    await refreshLimits();
-    render();
-  } catch {
-    error = "Couldn't delete the zone.";
-    render();
+    await mutateZone("DELETE", { id: z.id });
+  } catch (e) {
+    // Already gone (another adult removed it) is the outcome that was asked for.
+    if (e?.message !== "zone_not_found") {
+      writing = false;
+      error = "Couldn't delete the zone.";
+      renderKeepingEdits();
+      return;
+    }
   }
+  bumpUsed(-1);
+  // Off the list at once, and still off it if the re-read below fails: a
+  // deleted zone left listed could be opened and "deleted" again.
+  zones = zones.filter((x) => x.id !== z.id);
+  if (editing === z) { closeEditor(); render(); }
+  await reloadZonesAfterWrite("Deleted");
+  writing = false;
+  renderKeepingEdits();
+  await refreshLimits();
+  renderCount();
 }
 
 function wireEvents(root) {
   root.querySelectorAll("[data-tab]").forEach((btn) => btn.addEventListener("click", async () => {
     tab = btn.dataset.tab;
-    editing = null; map = null; mapCircle = null; resetSearch();
-    if (tab === "history") await loadEvents();
+    closeEditor();
+    error = "";
+    // Drawn at once, and again whatever the read does: the editor is gone the
+    // moment it is closed, so nothing of it is left on screen to press while
+    // the read is out, and a failed read says so in the list's place.
     render();
+    if (tab === "history") {
+      await loadEvents().catch(() => {});
+      // The adult may be back on Zones with an editor open by now.
+      renderKeepingEdits();
+    }
   }));
   root.querySelectorAll("[data-action]").forEach((btn) => btn.addEventListener("click", async () => {
     const action = btn.dataset.action;
+    // A message is about the action that raised it; the next one starts clean.
+    if (action === "new" || action === "edit" || action === "cancel") error = "";
     if (action === "new") { editing = blankZone(); resetSearch(); render(); }
     else if (action === "search") { await runAddressSearch(root); }
     else if (action === "edit") {
@@ -647,13 +803,12 @@ function wireEvents(root) {
       };
       render();
     }
-    else if (action === "cancel") { editing = null; map = null; mapCircle = null; resetSearch(); render(); }
+    else if (action === "cancel") { closeEditor(); render(); }
+    else if (action === "reload-history") { await loadEvents().catch(() => {}); renderKeepingEdits(); }
     else if (action === "save") { await saveZone(root); }
     else if (action === "delete") { await deleteZone(); }
   }));
-  root.querySelectorAll("[data-result]").forEach((btn) => btn.addEventListener("click", () => {
-    pickSearchResult(root, Number(btn.dataset.result));
-  }));
+  wireResults(root);
   const search = root.querySelector("#zsearch");
   if (search) {
     search.addEventListener("input", () => { searchQuery = search.value; });
@@ -670,9 +825,12 @@ function wireEvents(root) {
     if (label) label.textContent = String(clampRadius(radius.value));
     drawCircle();
   });
+  // Set in place rather than re-rendered: a render rebuilds the map and drops
+  // wherever the adult had panned and zoomed to.
   root.querySelectorAll('input[name="aud"]').forEach((el) => el.addEventListener("change", () => {
+    const adults = !!root.querySelector("#aud-adults")?.checked;
+    root.querySelectorAll("[data-aud]").forEach((box) => { box.disabled = adults; if (adults) box.checked = false; });
     readEditorInputs(root);
-    render();
   }));
 }
 
@@ -680,8 +838,18 @@ function wireEvents(root) {
 
 async function boot() {
   try {
-    await Promise.all([loadContext(), loadZones()]);
-    if (tab === "history") await loadEvents();
+    // History is read at boot for everyone, not only for whoever lands on it.
+    // The hub answers this one read from rows embedded in the page; left
+    // unread, they answered the first History tap instead, however long the
+    // page had been open, and a crossing that had just alerted was missing.
+    // Each read stands alone: a failed zones read used to end the wait at
+    // once, and the page was drawn before members and trackers had arrived,
+    // never to be drawn again.
+    await Promise.all([
+      loadContext(),
+      loadZones().catch(() => { error = "Couldn't load your zones. Reload to try again."; }),
+      loadEvents().catch(() => {}),
+    ]);
   } catch {
     error = "Couldn't load Safe Zones data.";
   }

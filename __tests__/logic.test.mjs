@@ -3,7 +3,7 @@ import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult, MAX_GEOCODE_RESULTS,
-  presenceSummary,
+  presenceSummary, supervisesZoneActivity, ownActivityNote,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -235,5 +235,50 @@ describe("presenceSummary", () => {
   it("treats an unrecognized state as unknown rather than home", () => {
     expect(presenceSummary(home, [{ memberId: "m1", state: "nonsense" }], nameOf))
       .toEqual({ home: [], away: [], unknown: ["Emma"] });
+  });
+});
+
+describe("who sees everyone's zone activity", () => {
+  const adult = { id: "a1", role: "adult" };
+  const child = { id: "c1", role: "child" };
+  const participant = { tenantKind: "shared_space", spaceKind: "general", isAdmin: false };
+  const steward = { tenantKind: "shared_space", spaceKind: "general", isAdmin: true };
+
+  it("a household is the default, where any adult supervises", () => {
+    expect(supervisesZoneActivity(adult)).toBe(true);
+    expect(supervisesZoneActivity(child)).toBe(false);
+    expect(supervisesZoneActivity(null)).toBe(false);
+    expect(supervisesZoneActivity(child, { tenantKind: "household", isAdmin: true })).toBe(false);
+  });
+
+  it("only the steward supervises in a shared space", () => {
+    expect(supervisesZoneActivity(adult, participant)).toBe(false);
+    expect(supervisesZoneActivity(adult, steward)).toBe(true);
+    expect(supervisesZoneActivity(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true })).toBe(true);
+  });
+
+  it("gives a supervisor no note", () => {
+    expect(ownActivityNote(adult)).toBe("");
+    expect(ownActivityNote(adult, steward)).toBe("");
+  });
+
+  it("tells a child the activity is their own and that adults manage zones", () => {
+    expect(ownActivityNote(child)).toBe("Zones are managed by adults. This is your own zone activity.");
+    expect(ownActivityNote(null, participant)).toBe("Zones are managed by adults. This is your own zone activity.");
+  });
+
+  it("tells an adult taking part in a space that the steward sees everyone's", () => {
+    expect(ownActivityNote(adult, participant))
+      .toBe("This is your own zone activity. In a shared space, the steward sees everyone's.");
+  });
+});
+
+describe("a member whose role is admin", () => {
+  // The SDK's isAdult counts "admin" as an adult; the local mirror must agree,
+  // or a household admin is told the history is theirs alone.
+  it("supervises zone activity in a household like any adult", () => {
+    const admin = { id: "m1", role: "admin" };
+    expect(supervisesZoneActivity(admin, { tenantKind: "household" })).toBe(true);
+    expect(ownActivityNote(admin, { tenantKind: "household" })).toBe("");
   });
 });

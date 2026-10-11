@@ -23,6 +23,18 @@
         { "action": "db", "as": "alex", "sql": "INSERT INTO app_safe_zones__zone_events (id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, alerted) VALUES ('e3', 'z1', 'School', ?, 'Casey', 'exit', 'forged', '2026-07-17T09:00:00Z', 0)", "params": ["{{casey}}"], "expect": { "status": 403 } },
         { "action": "db", "as": "casey", "sql": "UPDATE app_safe_zones__zone_events SET label = 'edited' WHERE id = 'e1'", "expect": { "status": 403 } }
       ]
+    },
+    {
+      "name": "in a shared space a participant adult reads only their own zone crossings while the steward reads every member's",
+      "context": "shared_space",
+      "members": {"pat": "adult", "sam": "adult", "steward": "admin"},
+      "steps": [
+        {"action": "seedRaw", "sql": "INSERT INTO app_safe_zones__zone_events (id, zone_id, zone_name, member_id, member_name, type, label, occurred_at, received_at, alerted) VALUES ('e1', 'z1', 'Clubhouse', ?, 'Pat', 'enter', 'Pat arrived at Clubhouse', '2026-07-17T08:30:00Z', '2026-07-17T08:30:05Z', 1), ('e2', 'z1', 'Clubhouse', ?, 'Sam', 'enter', 'Sam arrived at Clubhouse', '2026-07-17T08:40:00Z', '2026-07-17T08:40:05Z', 1)", "params": ["{{pat}}", "{{sam}}"]},
+        {"action": "db", "as": "pat", "sql": "SELECT id FROM app_safe_zones__zone_events", "expect": {"status": 200, "rowCount": 1, "rowsContain": [{"id": "e1"}]}},
+        {"action": "db", "as": "sam", "sql": "SELECT id FROM app_safe_zones__zone_events", "expect": {"status": 200, "rowCount": 1, "rowsContain": [{"id": "e2"}]}},
+        {"action": "db", "as": "steward", "sql": "SELECT id FROM app_safe_zones__zone_events ORDER BY id", "expect": {"status": 200, "rowCount": 2, "rowsContain": [{"id": "e1"}, {"id": "e2"}]}},
+        {"action": "db", "as": "steward", "sql": "DELETE FROM app_safe_zones__zone_events WHERE id = 'e2'", "expect": {"status": 403}}
+      ]
     }
   ]
 }
