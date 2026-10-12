@@ -94,6 +94,8 @@
     .search-row { display: flex; gap: 8px; }
     .search-row input[type="text"] { flex: 1 1 auto; min-width: 0; }
     .search-row .btn { flex: 0 0 auto; }
+    .load-error { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.9rem; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .load-error-retry { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 5px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; flex-shrink: 0; }
     .results { display: grid; gap: 4px; margin: 8px 0 0; }
     .result {
       text-align: left; border: 1.5px solid var(--border-mid); background: var(--surface);
@@ -137,6 +139,7 @@ let events = [];
 let tab = "zones";
 let editing = null;      // zone draft being edited (null = list view)
 let error = "";
+let loadFailed = false;  // the first load failed: zones and history are unknown, not empty
 // What this household may CREATE. Optimistic until the hub says otherwise:
 // the app cannot read the plan, so it assumes the ceiling and narrows on the
 // first zone_limit refusal, which carries the real numbers. MAX_ZONES stays
@@ -164,7 +167,9 @@ async function db(sql, params = []) {
   });
   if (res.status === 403) return { rows: [], status: 403 };
   if (!res.ok) throw new Error(`db ${res.status}`);
-  const payload = await res.json();
+  const payload = await res.json().catch(() => null);
+  if (!payload || typeof payload !== "object") throw new Error(`db ${res.status}`);
+  if (payload.error) throw new Error(payload.error);
   return { rows: payload.rows ?? [], status: res.status };
 }
 
@@ -212,17 +217,20 @@ function applyLimits(limits) {
 
 async function loadContext() {
   if (!CONTEXT) { members = []; trackers = []; presence = []; return; }
-  try {
-    // Not from the browser's cache, for the count's sake: see refreshLimits.
-    const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence,family.geofence_limits`, { cache: "no-store" });
-    const ctx = await res.json();
-    members = ctx["family.members"] ?? [];
-    trackers = ctx["family.geofence_trackers"] ?? [];
-    // Empty whenever the household has location switched off or no home zone —
-    // the hub decides, this app only renders what it is handed.
-    presence = ctx["family.presence"] ?? [];
-    applyLimits(ctx["family.geofence_limits"]);
-  } catch { members = []; trackers = []; presence = []; }
+  // Not caught: a roster that could not be read is a failed load (boot raises
+  // the banner), not a household with nobody and no trackers in it.
+  // Not from the browser's cache, for the count's sake: see refreshLimits.
+  const res = await fetch(`${CONTEXT}?keys=family.members,family.geofence_trackers,family.presence,family.geofence_limits`, { cache: "no-store" });
+  const ctx = await res.json().catch(() => null);
+  if (!res.ok || !ctx || typeof ctx !== "object" || ctx.error) throw new Error("Could not load the member list");
+  // A 200 can still name a key the hub failed to read: that is a failed load too.
+  if (Array.isArray(ctx.$errors) && ["family.members", "family.geofence_trackers"].some((k) => ctx.$errors.includes(k))) throw new Error("Could not load the member list");
+  members = ctx["family.members"] ?? [];
+  trackers = ctx["family.geofence_trackers"] ?? [];
+  // Empty whenever the household has location switched off or no home zone —
+  // the hub decides, this app only renders what it is handed.
+  presence = ctx["family.presence"] ?? [];
+  applyLimits(ctx["family.geofence_limits"]);
 }
 
 /**
@@ -293,6 +301,14 @@ function amAdult() { return !!ME && isAdult(members.find((m) => m.id === ME.id) 
 function render() {
   const root = document.getElementById("root");
   root.className = "";
+
+  if (loadFailed) {
+    root.innerHTML = `
+      <div class="topbar"><h1>${glyph("geofence")} Safe Zones</h1></div>
+      <div class="load-error" data-testid="load-error" role="alert"><span>Couldn’t load your safe zones.</span> <button type="button" class="load-error-retry" data-testid="load-retry">Try again</button></div>`;
+    root.querySelector('[data-testid="load-retry"]').addEventListener("click", boot);
+    return;
+  }
 
   let html = `
     <div class="topbar">
@@ -837,6 +853,7 @@ function wireEvents(root) {
 // --- Boot --------------------------------------------------------------------
 
 async function boot() {
+  let failed = false;
   try {
     // History is read at boot for everyone, not only for whoever lands on it.
     // The hub answers this one read from rows embedded in the page; left
@@ -847,12 +864,13 @@ async function boot() {
     // never to be drawn again.
     await Promise.all([
       loadContext(),
-      loadZones().catch(() => { error = "Couldn't load your zones. Reload to try again."; }),
-      loadEvents().catch(() => {}),
+      loadZones().catch(() => { failed = true; }),
+      loadEvents().catch(() => { failed = true; }),
     ]);
   } catch {
-    error = "Couldn't load Safe Zones data.";
+    failed = true;
   }
+  loadFailed = failed;
   render();
 }
 
