@@ -61,10 +61,12 @@
       "kind": "owner_only",
       "member_column": "member_id",
       "adults_bypass": true,
-      "endpoint_writes_only": true,
-      "retain_days": { "default": 30, "timestamp_column": "received_at", "override_key": "zone_history",
-        "tier": "transient" }
+      "endpoint_writes_only": true
     }
+  },
+  "retention": {
+    "zone_events": { "default": 30, "timestamp_column": "received_at", "override_key": "zone_history",
+      "tier": "transient" }
   },
   "db_plaintext_columns": ["classification", "delivery_status", "alert_audience"],
   "nav": { "label": "Safe Zones" },
@@ -74,8 +76,5 @@
       "query": "SELECT label AS title, occurred_at AS at FROM app_safe_zones__zone_events WHERE classification <> 'duplicate' ORDER BY received_at DESC LIMIT 5"
     },
     "display": { "template": "list", "title": "title", "when": "at" }
-  },
-  "resource_limits": {
-    "max_db_bytes": 52428800
   }
 }
