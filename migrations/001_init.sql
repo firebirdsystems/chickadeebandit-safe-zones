@@ -19,7 +19,7 @@
 -- `label` is the precomputed "Emma arrived at School" line so the native
 -- glance can render one decrypted column.
 CREATE TABLE IF NOT EXISTS app_safe_zones__zones (
-  id                 TEXT PRIMARY KEY,
+  id                 TEXT NOT NULL PRIMARY KEY,
   name               TEXT NOT NULL,
   lat                TEXT NOT NULL,
   lng                TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS app_safe_zones__zones (
 );
 
 CREATE TABLE IF NOT EXISTS app_safe_zones__zone_events (
-  id          TEXT PRIMARY KEY,
+  id          TEXT NOT NULL PRIMARY KEY,
   zone_id     TEXT NOT NULL,
   zone_name   TEXT NOT NULL DEFAULT '',
   member_id   TEXT NOT NULL,
