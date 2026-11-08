@@ -4,7 +4,8 @@ A [Chickadee Bandit](https://chickadeebandit.com/app-library/safe-zones) app.
 
 Geofenced safe-zone alerts for Chickadee Bandit — "Emma arrived at school."
 
-- **Zones** are drawn on a map in this app (adults only), 150 m–5 km radius.
+- **Zones** are drawn on a map in this app by an adult, or by a steward in a
+  shared space (where peers from other homes count as adults), 150 m–5 km radius.
   Fifteen per household on every live plan; fifteen is also the hard platform
   ceiling (phone OS region limits). The cap applies when a zone is CREATED — a household that
   drops below its zone count keeps every existing zone alerting. A trusted Hub
@@ -14,7 +15,8 @@ Geofenced safe-zone alerts for Chickadee Bandit — "Emma arrived at school."
 - **Crossings** are asserted by the authenticated **Chickadee Locate** companion app on the
   tracked person's phone, judged hub-side (`/api/geofence/event`: dedupe,
   cooldown, quiet hours), recorded into the endpoint-only `zone_events` table
-  (30-day retention), and pushed to the configured audience.
+  (30-day retention), and pushed to the configured audience. The default
+  audience is every adult at home and the stewards in a shared space.
 - **Trackers** show up via the `family.geofence_trackers` context key so this
   app can say "Dana's phone last reported 12 min ago / permission revoked".
 - **Who's home** comes from the hub's derived `family.presence` key (home/away

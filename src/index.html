@@ -113,13 +113,13 @@
 </div>
 
 <script type="module">
-import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate, glyph } from "/hub-sdk.js";
+import { esc, hubConfirm, hubAlert, formatRelativeDate, glyph } from "/hub-sdk.js";
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   presenceSummary, zoneLimitNote,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult,
-  ownActivityNote,
+  ownActivityNote, managesZones, zoneManagerLabel, defaultAudienceLabel,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -292,7 +292,7 @@ async function readEvents() {
 }
 
 function memberName(id) { return members.find((m) => m.id === id)?.name ?? "Unknown"; }
-function amAdult() { return !!ME && isAdult(members.find((m) => m.id === ME.id) ?? ME); }
+function canManageZones() { return !!ME && managesZones(members.find((m) => m.id === ME.id) ?? ME, TENANT); }
 
 // --- Rendering ---------------------------------------------------------------
 
@@ -370,7 +370,7 @@ function zonesHtml() {
         <h2>No safe zones yet</h2>
         <p class="muted">Draw a circle around school, home, or practice and get a push
         when a tracked family member arrives or leaves.</p>
-        ${amAdult() ? `<div style="margin-top:12px">${addZoneHtml()}</div>` : '<p class="tiny muted">An adult can add zones.</p>'}
+        ${canManageZones() ? `<div style="margin-top:12px">${addZoneHtml()}</div>` : `<p class="tiny muted">${zoneManagerLabel(TENANT)} can add zones.</p>`}
       </div>` + install;
   }
   const tiles = zones.map((z) => `
@@ -383,11 +383,11 @@ function zonesHtml() {
           ${z.active ? "" : " · paused"}</div>
         ${presenceHtml(z)}
       </div>
-      ${amAdult() ? `<button class="btn ghost" data-action="edit" data-id="${esc(z.id)}">Edit</button>` : ""}
+      ${canManageZones() ? `<button class="btn ghost" data-action="edit" data-id="${esc(z.id)}">Edit</button>` : ""}
     </div>`).join("");
   return `
     <div class="card"><div class="zone-list">${tiles}</div></div>
-    ${amAdult() ? `<div class="btn-row">${addZoneHtml()}</div>` : ""}
+    ${canManageZones() ? `<div class="btn-row">${addZoneHtml()}</div>` : ""}
     ${trackers.length === 0 ? installHtml() : ""}`;
 }
 
@@ -469,7 +469,7 @@ function editorHtml() {
       <div class="field">
         <label>Who gets the alert</label>
         <div class="checks">
-          <label class="check"><input type="radio" name="aud" id="aud-adults" ${z.alert_audience === "adults" ? "checked" : ""}> All adults</label>
+          <label class="check"><input type="radio" name="aud" id="aud-adults" ${z.alert_audience === "adults" ? "checked" : ""}> ${esc(defaultAudienceLabel(TENANT))}</label>
           <label class="check"><input type="radio" name="aud" id="aud-members" ${z.alert_audience !== "adults" ? "checked" : ""}> Specific members</label>
         </div>
         <div class="checks" id="aud-list" style="margin-top:6px">${audienceMembers}</div>
@@ -709,7 +709,7 @@ async function saveZone(root) {
   const z = editing;
   const problems = validateZone(z, zoneUsed ?? zones.length, !!z.id, zoneCap);
   if (Array.isArray(z.alert_audience) && z.alert_audience.length === 0) {
-    problems.push("Pick at least one person to alert (or choose All adults).");
+    problems.push(`Pick at least one person to alert (or choose ${defaultAudienceLabel(TENANT)}).`);
   }
   if (problems.length) { await hubAlert(problems[0]); return; }
   writing = true;

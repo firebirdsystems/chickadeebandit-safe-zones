@@ -4,6 +4,7 @@ import {
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult, MAX_GEOCODE_RESULTS,
   presenceSummary, supervisesZoneActivity, ownActivityNote, zoneLimitNote,
+  managesZones, zoneManagerLabel, defaultAudienceLabel,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -255,6 +256,16 @@ describe("who sees everyone's zone activity", () => {
     expect(supervisesZoneActivity(adult, participant)).toBe(false);
     expect(supervisesZoneActivity(adult, steward)).toBe(true);
     expect(supervisesZoneActivity(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true })).toBe(true);
+  });
+
+  it("lets the same people manage zones, and names them to everyone else", () => {
+    expect(managesZones(adult)).toBe(true);
+    expect(managesZones(adult, participant)).toBe(false);
+    expect(managesZones(adult, steward)).toBe(true);
+    expect(zoneManagerLabel()).toBe("An adult");
+    expect(zoneManagerLabel(participant)).toBe("A steward");
+    expect(defaultAudienceLabel()).toBe("All adults");
+    expect(defaultAudienceLabel(steward)).toBe("The stewards");
   });
 
   it("gives a supervisor no note", () => {

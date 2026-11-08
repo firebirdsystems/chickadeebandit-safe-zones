@@ -221,6 +221,24 @@ export function supervisesZoneActivity(member, { tenantKind = "household", isAdm
 }
 
 /**
+ * Whether a member may add and edit zones: the same people. A zone decides
+ * whose crossings alert whom, so in a shared space, where peers from other
+ * homes are adults too, it is the steward's; the hub refuses anyone else.
+ */
+export const managesZones = supervisesZoneActivity;
+
+/** Who can add zones, for the line shown to someone who can't. */
+export function zoneManagerLabel({ tenantKind = "household" } = {}) {
+  return tenantKind === "household" ? "An adult" : "A steward";
+}
+
+/** The default alert audience's label. In a shared space the hub sends a
+ *  crossing to the stewards, not to every participant. */
+export function defaultAudienceLabel({ tenantKind = "household" } = {}) {
+  return tenantKind === "household" ? "All adults" : "The stewards";
+}
+
+/**
  * The line above the history list for someone who sees only their own
  * crossings, or "" for someone who sees everyone's. A child is also told why
  * there is no Zones tab; an adult taking part in a shared space is told who
