@@ -37,16 +37,28 @@ export function validateZone(zone, existingCount, editingExisting, cap = MAX_ZON
   if (!Array.isArray(zone.tracked_member_ids) || zone.tracked_member_ids.length === 0) {
     problems.push("Pick at least one member to track.");
   }
-  // Two different refusals. At the platform ceiling there is nothing to sell;
-  // below it, the household is on a plan that allows fewer and upgrading is a
-  // real answer. Telling a paying household to "upgrade" is the one message
-  // worse than no message at all.
-  if (!editingExisting && existingCount >= cap) {
-    problems.push(cap < MAX_ZONES
-      ? `Your plan includes ${cap} safe zones. Your existing zones keep working — upgrade for up to ${MAX_ZONES}.`
-      : `You can have at most ${MAX_ZONES} zones (phone OS limit).`);
+  if (!editingExisting) {
+    const atLimit = zoneLimitNote(existingCount, cap);
+    if (atLimit) problems.push(atLimit);
   }
   return problems;
+}
+
+/**
+ * Why no zone can be added, or null when one can. Shown under the disabled Add
+ * button, in the editor and on a hub refusal, so all three say the same thing.
+ *
+ * Two different limits. At the platform ceiling there is nothing to buy; below
+ * it the household's subscription is inactive (a lapse or an ended trial) and
+ * renewing is a real answer. Telling a paying household to renew is the one
+ * message worse than none. `used` may exceed `cap`: a household that dropped
+ * below its zone count keeps every zone and is refused only the next one.
+ */
+export function zoneLimitNote(used, cap, ceiling = MAX_ZONES) {
+  if (!(used >= cap)) return null;
+  return cap < ceiling
+    ? `Your household can have ${cap} safe zones while its subscription is inactive. Your existing zones keep working and keep alerting. A household admin can renew from Settings → Billing to have up to ${ceiling}.`
+    : `You can have at most ${ceiling} zones (phone OS limit). Remove one to add another.`;
 }
 
 /** Parses a zone DB row (decrypted strings) into typed values, or null. */

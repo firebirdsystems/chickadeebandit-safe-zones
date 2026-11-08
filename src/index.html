@@ -117,7 +117,7 @@ import { esc, isAdult, hubConfirm, hubAlert, formatRelativeDate, glyph } from "/
 import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
-  presenceSummary,
+  presenceSummary, zoneLimitNote,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult,
   ownActivityNote,
 } from "./logic.js";
@@ -149,7 +149,6 @@ let zoneCap = MAX_ZONES;
 // against. null until the hub tells us; the local zones.length is only this
 // app's share and under-reports whenever a sibling app holds zones too.
 let zoneUsed = null;
-let upgradeBundle = null;
 let zonesDenied = false; // non-adult viewer: zones read is adult-only → history-only mode
 let map = null;
 let mapCircle = null;
@@ -190,7 +189,6 @@ async function mutateZone(method, body) {
         // our count says otherwise, because a sibling app holds the difference.
         zoneUsed = zoneUsed === null ? payload.cap : Math.max(zoneUsed, payload.cap);
       }
-      if (payload.bundle) upgradeBundle = payload.bundle;
       const err = new Error("zone_limit");
       err.zoneLimit = true;
       throw err;
@@ -354,6 +352,15 @@ function trackerBannersHtml() {
   }).join("");
 }
 
+/** The Add button, and at the limit the reason it is greyed out. The hub's
+ *  refusal cannot be the place that explains it: a disabled button is never
+ *  tapped, so the adult would see only a grey button and "8/3 zones". */
+function addZoneHtml() {
+  const note = zoneLimitNote(zoneUsed ?? zones.length, zoneCap);
+  return `<button class="btn" data-action="new" ${note ? `disabled aria-describedby="zone-limit-note"` : ""}>＋ Add a zone</button>`
+    + (note ? `<p class="tiny muted" id="zone-limit-note" data-testid="zone-limit-note" style="margin-top:8px;flex-basis:100%">${esc(note)}</p>` : "");
+}
+
 function zonesHtml() {
   if (editing) return editorHtml();
   if (!zones.length) {
@@ -363,7 +370,7 @@ function zonesHtml() {
         <h2>No safe zones yet</h2>
         <p class="muted">Draw a circle around school, home, or practice and get a push
         when a tracked family member arrives or leaves.</p>
-        ${amAdult() ? `<p style="margin-top:12px"><button class="btn" data-action="new" ${(zoneUsed ?? zones.length) >= zoneCap ? "disabled" : ""}>＋ Add a zone</button></p>` : '<p class="tiny muted">An adult can add zones.</p>'}
+        ${amAdult() ? `<div style="margin-top:12px">${addZoneHtml()}</div>` : '<p class="tiny muted">An adult can add zones.</p>'}
       </div>` + install;
   }
   const tiles = zones.map((z) => `
@@ -380,7 +387,7 @@ function zonesHtml() {
     </div>`).join("");
   return `
     <div class="card"><div class="zone-list">${tiles}</div></div>
-    ${amAdult() ? `<div class="btn-row"><button class="btn" data-action="new" ${(zoneUsed ?? zones.length) >= zoneCap ? "disabled" : ""}>＋ Add a zone</button></div>` : ""}
+    ${amAdult() ? `<div class="btn-row">${addZoneHtml()}</div>` : ""}
     ${trackers.length === 0 ? installHtml() : ""}`;
 }
 
@@ -724,10 +731,10 @@ async function saveZone(root) {
   } catch (e) {
     writing = false;
     const elsewhere = editing !== z;   // the adult has moved on to another zone, or to the list
+    // The refusal itself raised zoneUsed to at least the cap (mutateZone), so
+    // the note is never null here.
     error = e?.zoneLimit
-      ? (zoneCap < MAX_ZONES
-        ? `You're using all ${zoneCap} safe zones on your plan. Your existing zones keep working and keep alerting${upgradeBundle ? ` — renew in Settings → Billing for up to ${MAX_ZONES}` : ""}.`
-        : `You can have at most ${MAX_ZONES} zones (phone OS limit). Remove one to add another.`)
+      ? zoneLimitNote(Math.max(zoneUsed ?? zones.length, zoneCap), zoneCap)
       : !elsewhere ? "Couldn't save the zone. Try again."
       // A zone that was being created has nothing to open: it has to be added again.
       : z.id ? `Couldn't save "${z.name.trim()}". Open it and try again.` : `Couldn't create "${z.name.trim()}". Add it again.`;

@@ -3,7 +3,7 @@ import {
   MIN_RADIUS_M, MAX_RADIUS_M, MAX_ZONES,
   clampRadius, validateZone, parseZoneRow, trackerStatusLine, trackerIsStale, trackerBatteryLabel,
   buildGeocodeUrl, parseGeocodeResults, zoneNameFromResult, MAX_GEOCODE_RESULTS,
-  presenceSummary, supervisesZoneActivity, ownActivityNote,
+  presenceSummary, supervisesZoneActivity, ownActivityNote, zoneLimitNote,
 } from "../src/logic.js";
 
 describe("clampRadius", () => {
@@ -35,18 +35,18 @@ describe("validateZone", () => {
     expect(validateZone(good, MAX_ZONES, false)).toHaveLength(1);
   });
 
-  it("refuses below the ceiling when the plan cap is lower, and offers the upgrade", () => {
+  it("refuses below the ceiling when the plan cap is lower, and offers renewal", () => {
     expect(validateZone(good, 2, false, 3)).toEqual([]);
     const problems = validateZone(good, 3, false, 3);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatch(/upgrade/i);
+    expect(problems[0]).toMatch(/renew/i);
     expect(problems[0]).toContain("keep working");
   });
 
-  it("does NOT offer an upgrade at the platform ceiling — there is nothing to sell", () => {
+  it("does NOT offer renewal at the platform ceiling — there is nothing to buy", () => {
     const problems = validateZone(good, MAX_ZONES, false, MAX_ZONES);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).not.toMatch(/upgrade/i);
+    expect(problems[0]).not.toMatch(/renew|upgrade/i);
     expect(problems[0]).toMatch(/phone OS limit/);
   });
 
@@ -280,5 +280,28 @@ describe("a member whose role is admin", () => {
     const admin = { id: "m1", role: "admin" };
     expect(supervisesZoneActivity(admin, { tenantKind: "household" })).toBe(true);
     expect(ownActivityNote(admin, { tenantKind: "household" })).toBe("");
+  });
+});
+
+describe("zoneLimitNote", () => {
+  it("is null while a zone can still be added", () => {
+    expect(zoneLimitNote(2, 3)).toBeNull();
+    expect(zoneLimitNote(MAX_ZONES - 1, MAX_ZONES)).toBeNull();
+  });
+  it("explains a lapsed household's limit, including one already over it", () => {
+    // 8 zones on a 3-zone allowance: the case that used to show only "8/3 zones"
+    // and a grey button.
+    for (const used of [3, 8]) {
+      const note = zoneLimitNote(used, 3);
+      expect(note).toContain("3 safe zones");
+      expect(note).toContain("keep working");
+      expect(note).toContain("Settings → Billing");
+      expect(note).toContain(String(MAX_ZONES));
+    }
+  });
+  it("names the phone limit, never renewal, at the ceiling", () => {
+    const note = zoneLimitNote(MAX_ZONES, MAX_ZONES);
+    expect(note).toMatch(/phone OS limit/);
+    expect(note).not.toMatch(/renew|Billing/);
   });
 });
